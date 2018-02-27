@@ -5,7 +5,7 @@ import Rom from './src/rom/rom';
 import CpuBus from "./src/bus/cpu-bus";
 import Cpu from "./src/cpu/cpu";
 
-fetch('./sample.nes')
+fetch('./sample1.nes')
     .then((res) => res.arrayBuffer())
     .then((nesFile: ArrayBuffer) => {
         const { programROM, characterROM } = parse(nesFile);

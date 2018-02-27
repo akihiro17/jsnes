@@ -14,7 +14,12 @@ export default class CpuBus {
     }
 
     readByCpu(address: Word): Byte {
-        return this.progromROM.read(address);
+        console.log("readByCpu: " + address.toString(16));
+        if (address < 0x0800) {
+            return this.ram.read(address);
+        } else if (address >= 0x8000) {
+            return this.progromROM.read(address - 0x8000);
+        }
     }
 
     writeByCpu(address: Word, data: Byte) {
