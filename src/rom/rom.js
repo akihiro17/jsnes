@@ -11,4 +11,8 @@ export default class Rom {
     read(addr: Word): Byte {
         return this.rom[addr];
     }
+
+    size(): Number {
+        return this.rom.length;
+    }
 }

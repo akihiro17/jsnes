@@ -2,15 +2,18 @@
 
 import Rom from "../rom/rom";
 import Ram from "../ram/ram";
+import Ppu from "../ppu/ppu";
 import type { Byte, Word } from "../types/common";
 
 export default class CpuBus {
     progromROM: Rom;
     ram: Ram;
+    ppu: Ppu;
 
-    constructor(progromROM: Rom) {
+    constructor(progromROM: Rom, ppu: Ppu) {
         this.progromROM = progromROM;
         this.ram = new Ram(2048);
+        this.ppu = ppu;
     }
 
     readByCpu(address: Word): Byte {
@@ -25,6 +28,12 @@ export default class CpuBus {
     writeByCpu(address: Word, data: Byte) {
         if (address < 0x0800) {
             this.ram[address] = data;
+        } else if (address < 0x2000) {
+            // mirror
+        } else if (address < 0x2008) {
+            // ppu
+            console.log("ppu write:" + address.toString(16));
+            this.ppu.write(address - 0x2000, data);
         }
     }
 }

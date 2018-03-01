@@ -209,7 +209,7 @@ export default class Cpu {
                 break;
             }
             case "BNE": {
-                if (this.registers.P.Z === false) {
+                if (this.registers.P.zero === false) {
                     this.registers.PC = addressOrData;
                 }
                 break;
