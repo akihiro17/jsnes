@@ -35,7 +35,6 @@ export default class Ppu {
     }
 
     run(cycle: Number) {
-        console.log("cycle: " + cycle);
         this.cycle += cycle;
 
         if(this.line === 0) {
@@ -55,12 +54,15 @@ export default class Ppu {
         // 20ライン分Vblankという期間が設けられています
         // Vblank の前後に post-render/pre-render scanlineというアイドル状態が存在するため、262ライン分の描画期間が必要となります
         if (this.line === 262) {
+            console.log("draw");
             this.line = 0;
             return {
                 background: this.background,
                 palette: this.palette
             };
         }
+
+        return null;
     }
 
     buildBackground() {
@@ -96,6 +98,7 @@ export default class Ppu {
         }
         if (spriteId) {
             // console.log("spriteId: " + spriteId);
+            // console.log("sprite: " + sprite);
         }
         return {
             sprite: sprite,
@@ -200,6 +203,7 @@ export default class Ppu {
         if (this.vramAddress >= 0x2000) {
             // pallete
             if (this.vramAddress >= 0x3F00 && this.vramAddress < 0x4000) {
+                console.log("palette write");
                 this.palette[this.vramAddress - 0x3F00] = data;
             } else {
                 // console.log("vram write: " + this.calculateAddress().toString(16));

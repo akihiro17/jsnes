@@ -32,8 +32,7 @@ const start = (nesFile: ArrayBuffer) => {
     let cycle = 0;
     const renderer = new CanvasRenderer();
     while(true) {
-        cpu.run();
-        cycle++;
+        cycle += cpu.run();
         const renderingData = ppu.run(cycle * 3);
         if (renderingData) {
             renderer.render(renderingData);

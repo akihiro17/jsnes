@@ -23,22 +23,41 @@ interface Registers {
     PC: Word;
 }
 
+export const cycles = [
+  /*0x00*/ 7, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6,
+  /*0x10*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
+  /*0x20*/ 6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 4, 4, 6, 6,
+  /*0x30*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
+  /*0x40*/ 6, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 3, 4, 6, 6,
+  /*0x50*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
+  /*0x60*/ 6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 5, 4, 6, 6,
+  /*0x70*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
+  /*0x80*/ 2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4,
+  /*0x90*/ 2, 6, 2, 6, 4, 4, 4, 4, 2, 4, 2, 5, 5, 4, 5, 5,
+  /*0xA0*/ 2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4,
+  /*0xB0*/ 2, 5, 2, 5, 4, 4, 4, 4, 2, 4, 2, 4, 4, 4, 4, 4,
+  /*0xC0*/ 2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6,
+  /*0xD0*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+  /*0xE0*/ 2, 6, 3, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6,
+  /*0xF0*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+];
+
 const instructions = {
-    0x78: { fullName: "SEI", baseName: "SEI", mode: "implied" },
-    0xA2: { fullName: "LDX_IMMEDIATE", baseName: "LDX", mode: "immediate" },
-    0x9A: { fullName: "TXS_IMPLIED", baseName: "TXS", mode: "implied" },
-    0xA9: { fullName: "LDA_IMMEDIATE", baseName: "LDA", mode: "immediate" },
-    0x85: { fullName: "STA_ZERO", baseName: "STA", mode: "zeroPage" },
-    0x20: { fullName: "JSR_ABSOLUTE", baseName: "JSR", mode: "absolute" },
-    0x89: { fullName: 'NOPD', baseName: 'NOPD', mode: 'implied' },
-    0x8D: { fullName: 'STA_ABSOLUTE', baseName: 'STA', mode: 'absolute' },
-    0xA0: { fullName: "LDY_IMMEDIATE", baseName: "LDY", mode: "immediate" },
-    0xBD: { fullName: 'LDA_ABSX', baseName: 'LDA', mode: 'absoluteX' },
-    0xE8: { fullName: 'INX', baseName: 'INX', mode: 'implied' },
-    0x88: { fullName: 'DEY', baseName: 'DEY', mode: 'implied' },
-    0xD0: { fullName: 'BNE', baseName: 'BNE', mode: 'relative' },
-    0x4C: { fullName: 'JMP_ABSOLUTE', baseName: 'JMP', mode: 'absolute' },
-    0x00: { fullName: 'BRK', baseName: 'BRK', mode: 'implied' }
+    0x78: { fullName: "SEI", baseName: "SEI", mode: "implied", cycle: cycles[0x78]},
+    0xA2: { fullName: "LDX_IMMEDIATE", baseName: "LDX", mode: "immediate", cycle: cycles[0xA2] },
+    0x9A: { fullName: "TXS_IMPLIED", baseName: "TXS", mode: "implied", cycle: cycles[0x9A] },
+    0xA9: { fullName: "LDA_IMMEDIATE", baseName: "LDA", mode: "immediate", cycle: cycles[0xA9] },
+    0x85: { fullName: "STA_ZERO", baseName: "STA", mode: "zeroPage", cycle: cycles[0x85] },
+    0x20: { fullName: "JSR_ABSOLUTE", baseName: "JSR", mode: "absolute", cycle: cycles[0x20] },
+    0x89: { fullName: 'NOPD', baseName: 'NOPD', mode: 'implied', cycle: cycles[0x89] },
+    0x8D: { fullName: 'STA_ABSOLUTE', baseName: 'STA', mode: 'absolute', cycle: cycles[0x8D] },
+    0xA0: { fullName: "LDY_IMMEDIATE", baseName: "LDY", mode: "immediate", cycle: cycles[0xA0] },
+    0xBD: { fullName: 'LDA_ABSX', baseName: 'LDA', mode: 'absoluteX', cycle: cycles[0xBD] },
+    0xE8: { fullName: 'INX', baseName: 'INX', mode: 'implied', cycle: cycles[0xE8] },
+    0x88: { fullName: 'DEY', baseName: 'DEY', mode: 'implied', cycle: cycles[0x88] },
+    0xD0: { fullName: 'BNE', baseName: 'BNE', mode: 'relative', cycle: cycles[0xD0] },
+    0x4C: { fullName: 'JMP_ABSOLUTE', baseName: 'JMP', mode: 'absolute', cycle: cycles[0x4C]},
+    0x00: { fullName: 'BRK', baseName: 'BRK', mode: 'implied', cycle: cycles[0x00] }
 };
 
 const defaultRegisters: Registers = {
@@ -229,14 +248,16 @@ export default class Cpu {
         this.registers.PC = pc;
     }
 
-    run() {
+    run(): Number {
         // console.log("PC: " + this.registers.PC.toString(16));
         const opecode = this.fetch(this.registers.PC);
         // console.log("opecode: " + opecode.toString(16));
         // console.log(instructions[opecode]);
-        const { fullName, baseName, mode } = instructions[opecode];
+        const { fullName, baseName, mode, cycle } = instructions[opecode];
         const addressOrData = this.getAddressOrData(mode);
         // console.log("addressOrdata:" + addressOrData.toString(16));
         this.execInstruction(baseName, mode, addressOrData);
+
+        return cycle;
     }
 }

@@ -17,7 +17,7 @@ export default class CpuBus {
     }
 
     readByCpu(address: Word): Byte {
-        console.log("readByCpu: " + address.toString(16));
+        // console.log("readByCpu: " + address.toString(16));
         if (address < 0x0800) {
             return this.ram.read(address);
         } else if (address >= 0x8000) {
@@ -32,7 +32,7 @@ export default class CpuBus {
             // mirror
         } else if (address < 0x2008) {
             // ppu
-            console.log("ppu write:" + address.toString(16));
+            // console.log("ppu write:" + address.toString(16));
             this.ppu.write(address - 0x2000, data);
         }
     }
