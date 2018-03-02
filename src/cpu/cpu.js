@@ -230,13 +230,13 @@ export default class Cpu {
     }
 
     run() {
-        console.log("PC: " + this.registers.PC.toString(16));
+        // console.log("PC: " + this.registers.PC.toString(16));
         const opecode = this.fetch(this.registers.PC);
-        console.log("opecode: " + opecode.toString(16));
-        console.log(instructions[opecode]);
+        // console.log("opecode: " + opecode.toString(16));
+        // console.log(instructions[opecode]);
         const { fullName, baseName, mode } = instructions[opecode];
         const addressOrData = this.getAddressOrData(mode);
-        console.log("addressOrdata:" + addressOrData.toString(16));
+        // console.log("addressOrdata:" + addressOrData.toString(16));
         this.execInstruction(baseName, mode, addressOrData);
     }
 }
