@@ -34,8 +34,8 @@ export default class Nes {
         for (let i = 0; i < characterROM.length; i++) {
             characterRam.write(i, characterROM[i]);
         }
-        this.ppuBus = new PpuBus(characterRam);
-        this.ppu = new Ppu(this.ppuBus);
+        this.ppubus = new PpuBus(characterRam);
+        this.ppu = new Ppu(this.ppubus);
 
         this.cpubus = new CpuBus(program, this.ppu);
         this.cpu = new Cpu(this.cpubus);

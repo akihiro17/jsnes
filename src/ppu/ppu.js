@@ -2,20 +2,33 @@
 
 import Ram from "../ram/ram";
 import PpuBus from "../bus/ppu-bus";
+import type { Byte, Word } from "../types/common";
 
 // スプライトRAMは256バイトが存在します
 // 一つのスプライトに4バイトが割り当てられるため、64個分のスプライトデータが保持できます。
 const SPRITES_NUM = 0x100;
 
+export type Sprite = $ReadOnlyArray<$ReadOnlyArray<number>>
+
+export type Tile = $Exact<{
+    sprite: Sprite;
+    paletteId: Byte;
+}>
+
+export type RenderingData = $Exact<{
+    background: Array<Tile>;
+    palette: Uint8Array;
+}>
+
 export default class Ppu {
-    cycle: Number;
-    line: Number;
+    cycle: number;
+    line: number;
     vram: Ram
     bus: PpuBus;
     vramAddress: Word;
     palette: Uint8Array;
     isLowerVramAddr: boolean;
-    background;
+    background: Array<Tile>;
     spriteAddress: Byte;
     spriteRam: Ram;
     sprites;
@@ -34,7 +47,7 @@ export default class Ppu {
         this.sprites = [];
     }
 
-    run(cycle: Number) {
+    run(cycle: number): ?RenderingData {
         this.cycle += cycle;
 
         if(this.line === 0) {
@@ -227,7 +240,7 @@ export default class Ppu {
     }
 
     calculateAddress(): Byte {
-        if (this.vramAddr >= 0x3000 && this.vramAddr < 0x3f00) {
+        if (this.vramAddress >= 0x3000 && this.vramAddress < 0x3f00) {
             // mirror
             return this.vramAddress - 0x3000;
         } else {

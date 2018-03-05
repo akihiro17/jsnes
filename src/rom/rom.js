@@ -12,7 +12,7 @@ export default class Rom {
         return this.rom[addr];
     }
 
-    size(): Number {
+    size(): number {
         return this.rom.length;
     }
 }

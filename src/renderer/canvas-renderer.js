@@ -1,5 +1,8 @@
 /** @flow*/
 
+import type { Sprite, Tile, RenderingData } from '../ppu/ppu';
+import type { Byte, Word } from "../types/common";
+
 const colors = [
     [0x80, 0x80, 0x80], [0x00, 0x3D, 0xA6], [0x00, 0x12, 0xB0], [0x44, 0x00, 0x96],
     [0xA1, 0x00, 0x5E], [0xC7, 0x00, 0x28], [0xBA, 0x06, 0x00], [0x8C, 0x17, 0x00],
@@ -24,22 +27,23 @@ export default class CanvasRenderer {
     image: ImageData;
 
     constructor() {
-        const canvas = document.getElementById("nes");
+        const canvas = ((document.getElementById("nes"): any): HTMLCanvasElement);
         this.ctx = canvas.getContext("2d");
         this.image = this.ctx.createImageData(256, 240);
     }
 
-    render(renderingData) {
+    render(renderingData: RenderingData) {
         const background = renderingData["background"];
         for (let i = 0; i < background.length; i++) {
             const x = (i % 32) * 8;
             const y = ~~(i / 32) * 8;
             this.renderTile(background[i]["sprite"], background[i]["paletteId"], renderingData["palette"], x, y);
         }
+        if (!this.ctx) return;
         this.ctx.putImageData(this.image, 0, 0);
     }
 
-    renderTile(sprite, paletteId, palette, tileX: Number, tileY: Number) {
+    renderTile(sprite: Sprite, paletteId: Byte, palette: Uint8Array, tileX: number, tileY: number) {
           for (let i = 0; i < 8; i = i + 1) {
               for (let j = 0; j < 8; j = j + 1) {
                   const paletteIndex = paletteId * 4 + sprite[i][j];
