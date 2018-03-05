@@ -38,28 +38,27 @@ export default class Ppu {
         this.cycle += cycle;
 
         if(this.line === 0) {
-            this.background.length = 0;
+            this.background = [];
             this.buildSprites();
         }
 
         if (this.cycle >= 341) {
             this.cycle -= 341;
             this.line++;
-        }
 
-        if (this.line <= 240 && this.line % 8 === 0) {
-            this.buildBackground();
-        }
+            if (this.line <= 240 && this.line % 8 === 0) {
+                this.buildBackground();
+            }
 
-        // 20ライン分Vblankという期間が設けられています
-        // Vblank の前後に post-render/pre-render scanlineというアイドル状態が存在するため、262ライン分の描画期間が必要となります
-        if (this.line === 262) {
-            console.log("draw");
-            this.line = 0;
-            return {
-                background: this.background,
-                palette: this.palette
-            };
+            // 20ライン分Vblankという期間が設けられています
+            // Vblank の前後に post-render/pre-render scanlineというアイドル状態が存在するため、262ライン分の描画期間が必要となります
+            if (this.line === 262) {
+                this.line = 0;
+                return {
+                    background: this.background,
+                    palette: this.palette
+                };
+            }
         }
 
         return null;
@@ -68,12 +67,20 @@ export default class Ppu {
     buildBackground() {
         const clampedTileY = this.tileY() % 30;
 
-        for (let x = 0; x < 32; x = x + 1) {
+        if (clampedTileY > 30) {
+            throw "clampedTileY: " + clampedTileY;
+        }
+
+        for (let x = 0; x < 32; x++) {
             const clampedTileX = x % 32;
             const tile = this.buildTile(clampedTileX, clampedTileY);
             this.background.push(tile);
             // console.log("sprite:" + tile["sprite"]);
             // console.log("palette:" + tile["paletteId"]);
+        }
+
+        if (this.background.length > 30 * 32) {
+            throw "background length: " + this.background.length + " tileY: " + this.tileY();
         }
     }
 

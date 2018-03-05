@@ -26,7 +26,7 @@ export default class CanvasRenderer {
     constructor() {
         const canvas = document.getElementById("nes");
         this.ctx = canvas.getContext("2d");
-        this.image = this.ctx.createImageData(256, 224);
+        this.image = this.ctx.createImageData(256, 240);
     }
 
     render(renderingData) {
@@ -46,8 +46,12 @@ export default class CanvasRenderer {
                   const colorId = palette[paletteIndex];
                   const color = colors[colorId];
 
+                  if (colorId != 15) {
+                      const debug = true;
+                  }
+
                   const x = tileX + j;
-                  const y = (tileY + i)
+                  const y = (tileY + i);
 
                   if (x >= 0 && x < 256 && y >= 0 && y < 224) {
                       const index = (x + y * 0x100) * 4;
