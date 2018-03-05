@@ -24,40 +24,40 @@ interface Registers {
 }
 
 export const cycles: $ReadOnlyArray<number> = [
-  /*0x00*/ 7, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6,
-  /*0x10*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
-  /*0x20*/ 6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 4, 4, 6, 6,
-  /*0x30*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
-  /*0x40*/ 6, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 3, 4, 6, 6,
-  /*0x50*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
-  /*0x60*/ 6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 5, 4, 6, 6,
-  /*0x70*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
-  /*0x80*/ 2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4,
-  /*0x90*/ 2, 6, 2, 6, 4, 4, 4, 4, 2, 4, 2, 5, 5, 4, 5, 5,
-  /*0xA0*/ 2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4,
-  /*0xB0*/ 2, 5, 2, 5, 4, 4, 4, 4, 2, 4, 2, 4, 4, 4, 4, 4,
-  /*0xC0*/ 2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6,
-  /*0xD0*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
-  /*0xE0*/ 2, 6, 3, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6,
-  /*0xF0*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+    /* 0x00*/ 7, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6,
+    /* 0x10*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
+    /* 0x20*/ 6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 4, 4, 6, 6,
+    /* 0x30*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
+    /* 0x40*/ 6, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 3, 4, 6, 6,
+    /* 0x50*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
+    /* 0x60*/ 6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 5, 4, 6, 6,
+    /* 0x70*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
+    /* 0x80*/ 2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4,
+    /* 0x90*/ 2, 6, 2, 6, 4, 4, 4, 4, 2, 4, 2, 5, 5, 4, 5, 5,
+    /* 0xA0*/ 2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4,
+    /* 0xB0*/ 2, 5, 2, 5, 4, 4, 4, 4, 2, 4, 2, 4, 4, 4, 4, 4,
+    /* 0xC0*/ 2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6,
+    /* 0xD0*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+    /* 0xE0*/ 2, 6, 3, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6,
+    /* 0xF0*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7
 ];
 
 const instructions = {
-    "78": { fullName: "SEI", baseName: "SEI", mode: "implied", cycle: cycles[0x78]},
-    "A2": { fullName: "LDX_IMMEDIATE", baseName: "LDX", mode: "immediate", cycle: cycles[0xA2] },
+    78: { fullName: "SEI", baseName: "SEI", mode: "implied", cycle: cycles[0x78] },
+    A2: { fullName: "LDX_IMMEDIATE", baseName: "LDX", mode: "immediate", cycle: cycles[0xA2] },
     "9A": { fullName: "TXS_IMPLIED", baseName: "TXS", mode: "implied", cycle: cycles[0x9A] },
-    "A9": { fullName: "LDA_IMMEDIATE", baseName: "LDA", mode: "immediate", cycle: cycles[0xA9] },
-    "85": { fullName: "STA_ZERO", baseName: "STA", mode: "zeroPage", cycle: cycles[0x85] },
-    "20": { fullName: "JSR_ABSOLUTE", baseName: "JSR", mode: "absolute", cycle: cycles[0x20] },
-    "89": { fullName: 'NOPD', baseName: 'NOPD', mode: 'implied', cycle: cycles[0x89] },
-    "8D": { fullName: 'STA_ABSOLUTE', baseName: 'STA', mode: 'absolute', cycle: cycles[0x8D] },
-    "A0": { fullName: "LDY_IMMEDIATE", baseName: "LDY", mode: "immediate", cycle: cycles[0xA0] },
-    "BD": { fullName: 'LDA_ABSX', baseName: 'LDA', mode: 'absoluteX', cycle: cycles[0xBD] },
-    "E8": { fullName: 'INX', baseName: 'INX', mode: 'implied', cycle: cycles[0xE8] },
-    "88": { fullName: 'DEY', baseName: 'DEY', mode: 'implied', cycle: cycles[0x88] },
-    "D0": { fullName: 'BNE', baseName: 'BNE', mode: 'relative', cycle: cycles[0xD0] },
-    "4C": { fullName: 'JMP_ABSOLUTE', baseName: 'JMP', mode: 'absolute', cycle: cycles[0x4C]},
-    "00": { fullName: 'BRK', baseName: 'BRK', mode: 'implied', cycle: cycles[0x00] }
+    A9: { fullName: "LDA_IMMEDIATE", baseName: "LDA", mode: "immediate", cycle: cycles[0xA9] },
+    85: { fullName: "STA_ZERO", baseName: "STA", mode: "zeroPage", cycle: cycles[0x85] },
+    20: { fullName: "JSR_ABSOLUTE", baseName: "JSR", mode: "absolute", cycle: cycles[0x20] },
+    89: { fullName: "NOPD", baseName: "NOPD", mode: "implied", cycle: cycles[0x89] },
+    "8D": { fullName: "STA_ABSOLUTE", baseName: "STA", mode: "absolute", cycle: cycles[0x8D] },
+    A0: { fullName: "LDY_IMMEDIATE", baseName: "LDY", mode: "immediate", cycle: cycles[0xA0] },
+    BD: { fullName: "LDA_ABSX", baseName: "LDA", mode: "absoluteX", cycle: cycles[0xBD] },
+    E8: { fullName: "INX", baseName: "INX", mode: "implied", cycle: cycles[0xE8] },
+    88: { fullName: "DEY", baseName: "DEY", mode: "implied", cycle: cycles[0x88] },
+    D0: { fullName: "BNE", baseName: "BNE", mode: "relative", cycle: cycles[0xD0] },
+    "4C": { fullName: "JMP_ABSOLUTE", baseName: "JMP", mode: "absolute", cycle: cycles[0x4C] },
+    "00": { fullName: "BRK", baseName: "BRK", mode: "implied", cycle: cycles[0x00] }
 };
 
 const defaultRegisters: Registers = {
@@ -141,11 +141,12 @@ export default class Cpu {
             case "relative": {
                 const base = this.fetch(this.registers.PC);
                 const offset = this.registers.PC;
+
                 if (base < 0x80) {
                     return base + offset;
-                } else {
-                    return base + offset - 0x100;
                 }
+                return base + offset - 0x100;
+
             }
             default: {
                 throw new Error(`Unknown addressing mode ${mode} detected.`);
@@ -190,6 +191,7 @@ export default class Cpu {
                 break;
             }
             case "TXS": {
+
                 // this.registers.SP = this.registers.X;
                 this.registers.SP = this.registers.X + 0x0100;
                 break;
@@ -199,10 +201,12 @@ export default class Cpu {
                 break;
             }
             case "JSR": {
+
                 // ジャンプサブルーチン命令（JSR）によってスタックに格納する復帰アドレスは、
                 // 次の命令の一つ前のアドレス（JSRの最後のバイト）であり、
                 // リターンサブルーチン命令（RTS）によってインクリメントします
                 const PC = this.registers.PC - 1;
+
                 this.push((PC >> 8) & 0xFF);
                 this.push(PC & 0xFF);
                 this.registers.PC = addressOrData;
@@ -245,17 +249,22 @@ export default class Cpu {
 
     reset() {
         const pc = this.read(0xFFFC, "Word") | 0x8000;
+
         this.registers.PC = pc;
     }
 
     run(): number {
+
         // console.log("PC: " + this.registers.PC.toString(16));
         const opecode = this.fetch(this.registers.PC);
+
         // console.log("opecode: " + opecode.toString(16));
         // console.log(instructions[opecode]);
         const { fullName, baseName, mode, cycle } = instructions[opecode.toString(16).toUpperCase()];
         const addressOrData = this.getAddressOrData(mode);
+
         // console.log("addressOrdata:" + addressOrData.toString(16));
+
         this.execInstruction(baseName, mode, addressOrData);
 
         return cycle;

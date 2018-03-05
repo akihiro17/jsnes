@@ -1,6 +1,6 @@
 /** @flow*/
 
-import type { Sprite, Tile, RenderingData } from '../ppu/ppu';
+import type { Sprite, Tile, RenderingData } from "../ppu/ppu";
 import type { Byte, Word } from "../types/common";
 
 const colors = [
@@ -19,7 +19,7 @@ const colors = [
     [0xFF, 0xFF, 0xFF], [0xA6, 0xFC, 0xFF], [0xB3, 0xEC, 0xFF], [0xDA, 0xAB, 0xEB],
     [0xFF, 0xA8, 0xF9], [0xFF, 0xAB, 0xB3], [0xFF, 0xD2, 0xB0], [0xFF, 0xEF, 0xA6],
     [0xFF, 0xF7, 0x9C], [0xD7, 0xE8, 0x95], [0xA6, 0xED, 0xAF], [0xA2, 0xF2, 0xDA],
-    [0x99, 0xFF, 0xFC], [0xDD, 0xDD, 0xDD], [0x11, 0x11, 0x11], [0x11, 0x11, 0x11],
+    [0x99, 0xFF, 0xFC], [0xDD, 0xDD, 0xDD], [0x11, 0x11, 0x11], [0x11, 0x11, 0x11]
 ];
 
 export default class CanvasRenderer {
@@ -28,43 +28,49 @@ export default class CanvasRenderer {
 
     constructor() {
         const canvas = ((document.getElementById("nes"): any): HTMLCanvasElement);
+
         this.ctx = canvas.getContext("2d");
         this.image = this.ctx.createImageData(256, 240);
     }
 
     render(renderingData: RenderingData) {
-        const background = renderingData["background"];
+        const background = renderingData.background;
+
         for (let i = 0; i < background.length; i++) {
             const x = (i % 32) * 8;
             const y = ~~(i / 32) * 8;
-            this.renderTile(background[i]["sprite"], background[i]["paletteId"], renderingData["palette"], x, y);
+
+            this.renderTile(background[i].sprite, background[i].paletteId, renderingData.palette, x, y);
         }
-        if (!this.ctx) return;
+        if (!this.ctx) {
+            return;
+        }
         this.ctx.putImageData(this.image, 0, 0);
     }
 
     renderTile(sprite: Sprite, paletteId: Byte, palette: Uint8Array, tileX: number, tileY: number) {
-          for (let i = 0; i < 8; i = i + 1) {
-              for (let j = 0; j < 8; j = j + 1) {
-                  const paletteIndex = paletteId * 4 + sprite[i][j];
-                  const colorId = palette[paletteIndex];
-                  const color = colors[colorId];
+        for (let i = 0; i < 8; i = i + 1) {
+            for (let j = 0; j < 8; j = j + 1) {
+                const paletteIndex = paletteId * 4 + sprite[i][j];
+                const colorId = palette[paletteIndex];
+                const color = colors[colorId];
 
-                  if (colorId != 15) {
-                      const debug = true;
-                  }
+                if (colorId != 15) {
+                    const debug = true;
+                }
 
-                  const x = tileX + j;
-                  const y = (tileY + i);
+                const x = tileX + j;
+                const y = (tileY + i);
 
-                  if (x >= 0 && x < 256 && y >= 0 && y < 224) {
-                      const index = (x + y * 0x100) * 4;
-                      this.image.data[index] = color[0];
-                      this.image.data[index + 1] = color[1];
-                      this.image.data[index + 2] = color[2];
-                      this.image.data[index + 3] = 0xFF;
-                  }
-              }
-          }
+                if (x >= 0 && x < 256 && y >= 0 && y < 224) {
+                    const index = (x + y * 0x100) * 4;
+
+                    this.image.data[index] = color[0];
+                    this.image.data[index + 1] = color[1];
+                    this.image.data[index + 2] = color[2];
+                    this.image.data[index + 3] = 0xFF;
+                }
+            }
+        }
     }
 }

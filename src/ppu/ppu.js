@@ -50,7 +50,7 @@ export default class Ppu {
     run(cycle: number): ?RenderingData {
         this.cycle += cycle;
 
-        if(this.line === 0) {
+        if (this.line === 0) {
             this.background = [];
             this.buildSprites();
         }
@@ -81,27 +81,31 @@ export default class Ppu {
         const clampedTileY = this.tileY() % 30;
 
         if (clampedTileY > 30) {
-            throw "clampedTileY: " + clampedTileY;
+            throw `clampedTileY: ${clampedTileY}`;
         }
 
         for (let x = 0; x < 32; x++) {
             const clampedTileX = x % 32;
             const tile = this.buildTile(clampedTileX, clampedTileY);
+
             this.background.push(tile);
+
             // console.log("sprite:" + tile["sprite"]);
             // console.log("palette:" + tile["paletteId"]);
         }
 
         if (this.background.length > 30 * 32) {
-            throw "background length: " + this.background.length + " tileY: " + this.tileY();
+            throw `background length: ${this.background.length} tileY: ${this.tileY()}`;
         }
     }
 
     buildTile(tileX: Byte, tileY: Byte) {
+
         // console.log("tileX:" + tileX);
         // console.log("tileY:" + tileY);
 
         const blockId = this.getBlockId(tileX, tileY);
+
         // 0x23C0が0xE4であれば1110 0100だから
         // それぞれのブロックのパレットIDは以下のようになる
         // ブロック0: 00
@@ -114,24 +118,29 @@ export default class Ppu {
         const sprite = this.buildSprite(spriteId);
 
         if (blockId) {
+
             // console.log("blockId: " + blockId + " tileX: " + tileX + " tileY: " + tileY);
         }
         if (spriteId) {
+
             // console.log("spriteId: " + spriteId);
             // console.log("sprite: " + sprite);
         }
         return {
-            sprite: sprite,
-            paletteId: paletteId
+            sprite,
+            paletteId
         };
     }
 
     buildSprite(spriteId: Byte) {
+
         // 8 x 8
         const sprite = new Array(8).fill(0).map(() => [0, 0, 0, 0, 0, 0, 0, 0]);
+
         for (let i = 0; i < 16; i = i + 1) {
             const address = spriteId * 16 + i;
             const ram = this.readCharacterRam(address);
+
             for (let j = 0; j < 8; j = j + 1) {
                 if (ram & (0x80 >> j)) {
                     sprite[i % 8][j] += 0x01 << ~~(i / 8);
@@ -143,12 +152,14 @@ export default class Ppu {
 
     buildSprites() {
         const offset = 0x0000;
+
         // offset	用途
         // 0	Y座標-1
         // 1	パターンインデックス
         // 2    アトリビュート
         // 3	X座標
-        for(let i = 0; i < SPRITES_NUM; i = i + 4) {
+
+        for (let i = 0; i < SPRITES_NUM; i = i + 4) {
             const address = i + offset;
             const y = this.spriteRam.read(i);
             const spriteId = this.spriteRam.read(i + 1);
@@ -156,7 +167,8 @@ export default class Ppu {
             const x = this.spriteRam.read(i + 3);
 
             const sprite = this.buildSprite(spriteId);
-            this.sprites[i / 4] = {sprite, x, y, attribute, spriteId};
+
+            this.sprites[i / 4] = { sprite, x, y, attribute, spriteId };
         }
     }
 
@@ -173,11 +185,13 @@ export default class Ppu {
 
     getSpriteId(tileX: Byte, tileY: Byte): Byte {
         const address = tileY * 32 + tileX;
+
         return this.vram.read(address);
     }
 
     getAttribute(tileX: Byte, tileY: Byte): Byte {
         const address = ~~(tileX / 4) + (~~(tileY / 4) * 8) + 0x03c0;
+
         return this.vram.read(address);
     }
 
@@ -196,16 +210,18 @@ export default class Ppu {
             return;
         }
         if (address === 0x0006) {
+
             // PPUメモリアドレス
             // console.log("ppu address: " + data.toString(16));
             this.writeVramAddress(data);
             return;
         }
         if (address === 0x0007) {
+
             // PPUメモリデータ
             // console.log("ppu memory data: " + data + " to " + this.vramAddress.toString(16));
             this.writeVramData(data);
-            return;
+
         }
     }
 
@@ -221,11 +237,13 @@ export default class Ppu {
 
     writeVramData(data: Byte): void {
         if (this.vramAddress >= 0x2000) {
+
             // pallete
             if (this.vramAddress >= 0x3F00 && this.vramAddress < 0x4000) {
                 console.log("palette write");
                 this.palette[this.vramAddress - 0x3F00] = data;
             } else {
+
                 // console.log("vram write: " + this.calculateAddress().toString(16));
                 this.writeVram(this.calculateAddress(), data);
             }
@@ -241,10 +259,11 @@ export default class Ppu {
 
     calculateAddress(): Byte {
         if (this.vramAddress >= 0x3000 && this.vramAddress < 0x3f00) {
+
             // mirror
             return this.vramAddress - 0x3000;
-        } else {
-            return this.vramAddress - 0x2000;
         }
+        return this.vramAddress - 0x2000;
+
     }
 }

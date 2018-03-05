@@ -1,8 +1,8 @@
 /** @flow*/
 
-import { parse } from '../parser';
-import Rom from '../rom/rom';
-import Ram from '../ram/ram';
+import { parse } from "../parser";
+import Rom from "../rom/rom";
+import Ram from "../ram/ram";
 import CpuBus from "../bus/cpu-bus";
 import PpuBus from "../bus/ppu-bus";
 import Cpu from "../cpu/cpu";
@@ -31,6 +31,7 @@ export default class Nes {
         console.log(program.read(1));
 
         const characterRam = new Ram(0x4000);
+
         for (let i = 0; i < characterROM.length; i++) {
             characterRam.write(i, characterROM[i]);
         }
@@ -45,10 +46,12 @@ export default class Nes {
     }
 
     frame() {
-        while(true) {
+        while (true) {
             let cycle = 0;
+
             cycle += this.cpu.run();
             const renderingData = this.ppu.run(cycle * 3);
+
             if (renderingData) {
                 this.renderer.render(renderingData);
                 break;
