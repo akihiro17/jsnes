@@ -1,6 +1,6 @@
 /** @flow*/
 
-import type { Sprite, Tile, RenderingData } from "../ppu/ppu";
+import type { Sprite, SpriteWithAttribute, Tile, RenderingData } from "../ppu/ppu";
 import type { Byte, Word } from "../types/common";
 
 const colors = [
@@ -42,6 +42,12 @@ export default class CanvasRenderer {
 
             this.renderTile(background[i].sprite, background[i].paletteId, renderingData.palette, x, y);
         }
+
+        const sprites = renderingData.sprites;
+        if (sprites) {
+            this.renderSprites(sprites, renderingData.palette);
+        }
+
         if (!this.ctx) {
             return;
         }
@@ -51,13 +57,10 @@ export default class CanvasRenderer {
     renderTile(sprite: Sprite, paletteId: Byte, palette: Uint8Array, tileX: number, tileY: number) {
         for (let i = 0; i < 8; i = i + 1) {
             for (let j = 0; j < 8; j = j + 1) {
+                // 0x3F00～0x3F0Fはバックグラウンドパレット
                 const paletteIndex = paletteId * 4 + sprite[i][j];
                 const colorId = palette[paletteIndex];
                 const color = colors[colorId];
-
-                if (colorId != 15) {
-                    const debug = true;
-                }
 
                 const x = tileX + j;
                 const y = (tileY + i);
@@ -70,6 +73,45 @@ export default class CanvasRenderer {
                     this.image.data[index + 2] = color[2];
                     this.image.data[index + 3] = 0xFF;
                 }
+            }
+        }
+    }
+
+    renderSprites(sprites: $ReadOnlyArray<SpriteWithAttribute>, palette: Uint8Array) {
+        for (const sprite of sprites) {
+            if (sprite) {
+                this.renderSprite(sprite, palette);
+            }
+        }
+    }
+
+    renderSprite(sprite: SpriteWithAttribute, palette: Uint8Array) {
+
+        // アトリビュート
+        // VHP000CC
+        // |||   ||
+        // |||   ++-カラーパレット上位2ビット
+        // ||+------BGとの優先順位、0:SPR優先、1:BG優先
+        // |+-------左右反転フラグ、1:反転
+        // +--------上下反転フラグ、1:反転
+        const paletteId = sprite.attribute & 0x03;
+
+        for (let i = 0; i < 8; i = i + 1) {
+            for (let j = 0; j < 8; j = j + 1) {
+                // 0x3F00～0x3F0Fはバックグラウンドパレット,
+                // 0x3F10～0x3F1F`はスプライトパレットです
+                const paletteIndex = paletteId * 4 + sprite.sprite[i][j] + 0x10;
+                const colorId = palette[paletteIndex];
+                const color = colors[colorId];
+
+                const x = sprite.x + j;
+                const y = sprite.y + i;
+
+                const index = (x + y * 0x100) * 4;
+
+                this.image.data[index] = color[0];
+                this.image.data[index + 1] = color[1];
+                this.image.data[index + 2] = color[2];
             }
         }
     }

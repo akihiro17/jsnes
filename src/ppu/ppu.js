@@ -10,6 +10,14 @@ const SPRITES_NUM = 0x100;
 
 export type Sprite = $ReadOnlyArray<$ReadOnlyArray<number>>
 
+export type SpriteWithAttribute = $Exact<{
+    sprite: Sprite;
+    x: Byte;
+    y: Byte;
+    attribute: Byte;
+    spriteId: number;
+}>;
+
 export type Tile = $Exact<{
     sprite: Sprite;
     paletteId: Byte;
@@ -18,6 +26,7 @@ export type Tile = $Exact<{
 export type RenderingData = $Exact<{
     background: Array<Tile>;
     palette: Uint8Array;
+    sprites: ?$ReadOnlyArray<SpriteWithAttribute>;
 }>
 
 export default class Ppu {
@@ -31,7 +40,8 @@ export default class Ppu {
     background: Array<Tile>;
     spriteAddress: Byte;
     spriteRam: Ram;
-    sprites;
+    sprites: Array<SpriteWithAttribute>;
+    registers: Uint8Array;
 
     constructor(ppuBus: PpuBus) {
         this.cycle = 0;
@@ -45,6 +55,7 @@ export default class Ppu {
         this.spriteAddress = 0x00;
         this.spriteRam = new Ram(0x100);
         this.sprites = [];
+        this.registers = new Uint8Array(0x08);
     }
 
     run(cycle: number): ?RenderingData {
@@ -63,13 +74,18 @@ export default class Ppu {
                 this.buildBackground();
             }
 
+            if (this.line === 241) {
+                this.setVblank();
+            }
+
             // 20ライン分Vblankという期間が設けられています
             // Vblank の前後に post-render/pre-render scanlineというアイドル状態が存在するため、262ライン分の描画期間が必要となります
             if (this.line === 262) {
                 this.line = 0;
                 return {
                     background: this.background,
-                    palette: this.palette
+                    palette: this.palette,
+                    sprites: this.sprites
                 };
             }
         }
@@ -204,7 +220,8 @@ export default class Ppu {
             this.spriteAddress = data;
             return;
         }
-        if (address === 0x0003) {
+        if (address === 0x0004) {
+            console.log("sprite vram address: " + this.spriteAddress);
             this.spriteRam.write(this.spriteAddress, data);
             this.spriteAddress++;
             return;
@@ -219,9 +236,30 @@ export default class Ppu {
         if (address === 0x0007) {
 
             // PPUメモリデータ
-            // console.log("ppu memory data: " + data + " to " + this.vramAddress.toString(16));
+            console.log("ppu memory data: " + data + " to " + this.vramAddress.toString(16));
             this.writeVramData(data);
+            return;
+        }
 
+        // PPUレジスタ
+        if (0x0000 <= address && address <= 0x0007) {
+            this.registers[address] = data;
+            return;
+        }
+
+        throw "unexpected write address(ppu): " + address.toString(16);
+    }
+
+    read(address: Word): Byte {
+        if (address === 0x0002) {
+            const data = this.registers[0x02];
+            this.clearVblank();
+            return data;
+        }
+        else if (address === 0x0004) {
+            return this.spriteRam.read(this.spriteAddress);
+        } else {
+            throw "unexpected read address: " + address.toString(16);
         }
     }
 
@@ -265,5 +303,13 @@ export default class Ppu {
         }
         return this.vramAddress - 0x2000;
 
+    }
+
+    setVblank() {
+        this.registers[0x02] |= 0x80;
+    }
+
+    clearVblank() {
+        this.registers[0x02] &= 0x7F;
     }
 }

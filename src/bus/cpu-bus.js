@@ -21,12 +21,16 @@ export default class CpuBus {
         // console.log("readByCpu: " + address.toString(16));
         if (address < 0x0800) {
             return this.ram.read(address);
-        } else if (address >= 0x8000) {
+        }
+        else if (address < 0x4000) {
+            return this.ppu.read((address - 0x2000) % 8);
+        }
+        else if (address >= 0x8000) {
             return this.progromROM.read(address - 0x8000);
         }
 
         // Cannot expect `Byte` as the return type of function because number [1] is incompatible with implicitly-returned
-        return 0;
+        throw "unexpected read address: " + address.toString(16);
     }
 
     writeByCpu(address: Word, data: Byte) {
@@ -38,8 +42,10 @@ export default class CpuBus {
         } else if (address < 0x2008) {
 
             // ppu
-            // console.log("ppu write:" + address.toString(16));
+            console.log("ppu write:" + address.toString(16));
             this.ppu.write(address - 0x2000, data);
+        } else {
+            throw "unexpected write address: " + address.toString(16);
         }
     }
 }

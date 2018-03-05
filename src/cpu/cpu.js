@@ -55,9 +55,11 @@ const instructions = {
     "BD": { fullName: "LDA_ABSX", baseName: "LDA", mode: "absoluteX", cycle: cycles[0xBD] },
     "E8": { fullName: "INX", baseName: "INX", mode: "implied", cycle: cycles[0xE8] },
     "88": { fullName: "DEY", baseName: "DEY", mode: "implied", cycle: cycles[0x88] },
-    "D0": { fullName: "BNE", baseName: "BNE", mode: "relative", cycle: cycles[0xD0] },
+   "D0": { fullName: "BNE", baseName: "BNE", mode: "relative", cycle: cycles[0xD0] },
     "4C": { fullName: "JMP_ABSOLUTE", baseName: "JMP", mode: "absolute", cycle: cycles[0x4C] },
-    "00": { fullName: "BRK", baseName: "BRK", mode: "implied", cycle: cycles[0x00] }
+    "00": { fullName: "BRK", baseName: "BRK", mode: "implied", cycle: cycles[0x00] },
+    "AD": { fullName: "LDA_ABSOLUTE", baseName: "LDA", mode: "absolute", cycle: cycles[0xAD] },
+    "10": { fullName: "BPL", baseName: "BPL", mode: "relative", cycle: cycles[0x10] }
 };
 
 const defaultRegisters: Registers = {
@@ -241,6 +243,12 @@ export default class Cpu {
                 this.registers.PC++;
                 break;
             }
+            case "BPL": {
+                if (!this.registers.P.negative) {
+                    this.registers.PC = addressOrData;
+                }
+                break;
+            }
             default: {
                 throw new Error(`Unknown instruction ${baseName} detected.`);
             }
@@ -259,7 +267,7 @@ export default class Cpu {
         const opecode = this.fetch(this.registers.PC);
 
         // console.log("opecode: " + opecode.toString(16));
-        // console.log(instructions[opecode]);
+        // console.log(instructions[opecode.toString(16).toUpperCase()]);
         const { fullName, baseName, mode, cycle } = instructions[opecode.toString(16).toUpperCase()];
         const addressOrData = this.getAddressOrData(mode);
 
