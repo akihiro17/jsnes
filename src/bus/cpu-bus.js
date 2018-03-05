@@ -23,6 +23,8 @@ export default class CpuBus {
             return this.ram.read(address);
         }
         else if (address < 0x4000) {
+            // 0x2000～0x2007 PPU レジスタ
+            // 0x2008～0x3FFF PPUレジスタのミラー
             return this.ppu.read((address - 0x2000) % 8);
         }
         else if (address >= 0x8000) {

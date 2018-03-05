@@ -55,10 +55,11 @@ const instructions = {
     "BD": { fullName: "LDA_ABSX", baseName: "LDA", mode: "absoluteX", cycle: cycles[0xBD] },
     "E8": { fullName: "INX", baseName: "INX", mode: "implied", cycle: cycles[0xE8] },
     "88": { fullName: "DEY", baseName: "DEY", mode: "implied", cycle: cycles[0x88] },
-   "D0": { fullName: "BNE", baseName: "BNE", mode: "relative", cycle: cycles[0xD0] },
+    "D0": { fullName: "BNE", baseName: "BNE", mode: "relative", cycle: cycles[0xD0] },
     "4C": { fullName: "JMP_ABSOLUTE", baseName: "JMP", mode: "absolute", cycle: cycles[0x4C] },
     "00": { fullName: "BRK", baseName: "BRK", mode: "implied", cycle: cycles[0x00] },
     "AD": { fullName: "LDA_ABSOLUTE", baseName: "LDA", mode: "absolute", cycle: cycles[0xAD] },
+    "E0": { fullName: "CPX_IMMEDIATE", baseName: "CPX", mode: "immediate", cycle: cycles[0xE0] },
     "10": { fullName: "BPL", baseName: "BPL", mode: "relative", cycle: cycles[0x10] }
 };
 
@@ -247,6 +248,15 @@ export default class Cpu {
                 if (!this.registers.P.negative) {
                     this.registers.PC = addressOrData;
                 }
+                break;
+            }
+            case "CPX": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const compared = this.registers.X - data;
+                this.registers.P.negative = !!(compared & 0x80);
+                this.registers.P.zero = !compared;
+                // ?
+                this.registers.P.carry = compared >= 0;
                 break;
             }
             default: {

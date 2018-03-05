@@ -100,18 +100,20 @@ export default class CanvasRenderer {
             for (let j = 0; j < 8; j = j + 1) {
                 // 0x3F00～0x3F0Fはバックグラウンドパレット,
                 // 0x3F10～0x3F1F`はスプライトパレットです
-                const paletteIndex = paletteId * 4 + sprite.sprite[i][j] + 0x10;
-                const colorId = palette[paletteIndex];
-                const color = colors[colorId];
+                if (sprite.sprite[i][j]) {
+                    const paletteIndex = paletteId * 4 + sprite.sprite[i][j] + 0x10;
+                    const colorId = palette[paletteIndex];
+                    const color = colors[colorId];
 
-                const x = sprite.x + j;
-                const y = sprite.y + i;
+                    const x = sprite.x + j;
+                    const y = sprite.y + i;
 
-                const index = (x + y * 0x100) * 4;
+                    const index = (x + y * 0x100) * 4;
 
-                this.image.data[index] = color[0];
-                this.image.data[index + 1] = color[1];
-                this.image.data[index + 2] = color[2];
+                    this.image.data[index] = color[0];
+                    this.image.data[index + 1] = color[1];
+                    this.image.data[index + 2] = color[2];
+                }
             }
         }
     }

@@ -131,7 +131,7 @@ export default class Ppu {
         const attr = this.getAttribute(tileX, tileY);
         const paletteId = (attr >> (blockId * 2)) & 0x03;
         const spriteId = this.getSpriteId(tileX, tileY);
-        const sprite = this.buildSprite(spriteId);
+        const sprite = this.buildSprite(spriteId, this.backgroundTableOffset());
 
         if (blockId) {
 
@@ -148,13 +148,13 @@ export default class Ppu {
         };
     }
 
-    buildSprite(spriteId: Byte) {
+    buildSprite(spriteId: Byte, offset: Word) {
 
         // 8 x 8
         const sprite = new Array(8).fill(0).map(() => [0, 0, 0, 0, 0, 0, 0, 0]);
 
         for (let i = 0; i < 16; i = i + 1) {
-            const address = spriteId * 16 + i;
+            const address = spriteId * 16 + i + offset;
             const ram = this.readCharacterRam(address);
 
             for (let j = 0; j < 8; j = j + 1) {
@@ -167,7 +167,7 @@ export default class Ppu {
     }
 
     buildSprites() {
-        const offset = 0x0000;
+        const offset = this.spriteTableOffset();
 
         // offset	用途
         // 0	Y座標-1
@@ -177,12 +177,15 @@ export default class Ppu {
 
         for (let i = 0; i < SPRITES_NUM; i = i + 4) {
             const address = i + offset;
-            const y = this.spriteRam.read(i);
+            // INFO: Offset sprite Y position, because First and last 8line is not rendered.
+            // これがないとギコ猫が(0, 0)と(20, 50)のポジションに出てしまう
+            const y = this.spriteRam.read(i) - 8;
+            if (y < 0) return;
             const spriteId = this.spriteRam.read(i + 1);
             const attribute = this.spriteRam.read(i + 2);
             const x = this.spriteRam.read(i + 3);
 
-            const sprite = this.buildSprite(spriteId);
+            const sprite = this.buildSprite(spriteId, this.spriteTableOffset());
 
             this.sprites[i / 4] = { sprite, x, y, attribute, spriteId };
         }
@@ -221,9 +224,12 @@ export default class Ppu {
             return;
         }
         if (address === 0x0004) {
-            console.log("sprite vram address: " + this.spriteAddress);
+            console.log("sprite vram address: " + this.spriteAddress + " data: " + data);
             this.spriteRam.write(this.spriteAddress, data);
             this.spriteAddress++;
+            return;
+        }
+        if (address === 0x0005) {
             return;
         }
         if (address === 0x0006) {
@@ -242,7 +248,8 @@ export default class Ppu {
         }
 
         // PPUレジスタ
-        if (0x0000 <= address && address <= 0x0007) {
+        if (0x0000 === address || address === 0x0001) {
+            console.log("ppu register: " + data + " to " + address);
             this.registers[address] = data;
             return;
         }
@@ -278,14 +285,16 @@ export default class Ppu {
 
             // pallete
             if (this.vramAddress >= 0x3F00 && this.vramAddress < 0x4000) {
-                console.log("palette write");
+                // console.log("palette write");
                 this.palette[this.vramAddress - 0x3F00] = data;
             } else {
 
+                // ネームテーブル、属性テーブル
                 // console.log("vram write: " + this.calculateAddress().toString(16));
                 this.writeVram(this.calculateAddress(), data);
             }
         } else {
+            console.log("write character ram:: " + this.vramAddress);
             this.bus.writeByPpu(this.vramAddress, data);
         }
         this.vramAddress += 0x01;
@@ -311,5 +320,24 @@ export default class Ppu {
 
     clearVblank() {
         this.registers[0x02] &= 0x7F;
+    }
+
+    backgroundTableOffset(): Word {
+        // コントロールレジスタ1
+        // bit 用途
+        // --------------------------------------------------------
+        // 7   VBlank時にNMIを発生　0:無効、1:発生
+        // 6   PPUマスタースレーブ、常に1
+        // 5   スプライトサイズ　0:8x8、1:8x16
+        // 4   背景パターンテーブルアドレス指定　0:$0000、1:$1000
+        // 3   スプライトパターンテーブルアドレス指定　0:$0000、1:$1000
+        // 2   PPUメモリアドレスインクリメント　0:+=1、1:+=32
+        // 1-0 ネームテーブルアドレス指定
+        return this.registers[0] & 0x10 ? 0x1000 : 0x0000;
+    }
+
+    spriteTableOffset(): Word {
+        return this.registers[0] & 0x08 ? 0x1000 : 0x0000;
+        // return 0x1000;
     }
 }
