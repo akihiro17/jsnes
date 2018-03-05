@@ -43,19 +43,19 @@ export const cycles: $ReadOnlyArray<number> = [
 ];
 
 const instructions = {
-    78: { fullName: "SEI", baseName: "SEI", mode: "implied", cycle: cycles[0x78] },
-    A2: { fullName: "LDX_IMMEDIATE", baseName: "LDX", mode: "immediate", cycle: cycles[0xA2] },
+    "78": { fullName: "SEI", baseName: "SEI", mode: "implied", cycle: cycles[0x78] },
+    "A2": { fullName: "LDX_IMMEDIATE", baseName: "LDX", mode: "immediate", cycle: cycles[0xA2] },
     "9A": { fullName: "TXS_IMPLIED", baseName: "TXS", mode: "implied", cycle: cycles[0x9A] },
-    A9: { fullName: "LDA_IMMEDIATE", baseName: "LDA", mode: "immediate", cycle: cycles[0xA9] },
-    85: { fullName: "STA_ZERO", baseName: "STA", mode: "zeroPage", cycle: cycles[0x85] },
-    20: { fullName: "JSR_ABSOLUTE", baseName: "JSR", mode: "absolute", cycle: cycles[0x20] },
-    89: { fullName: "NOPD", baseName: "NOPD", mode: "implied", cycle: cycles[0x89] },
+    "A9": { fullName: "LDA_IMMEDIATE", baseName: "LDA", mode: "immediate", cycle: cycles[0xA9] },
+    "85": { fullName: "STA_ZERO", baseName: "STA", mode: "zeroPage", cycle: cycles[0x85] },
+    "20": { fullName: "JSR_ABSOLUTE", baseName: "JSR", mode: "absolute", cycle: cycles[0x20] },
+    "89": { fullName: "NOPD", baseName: "NOPD", mode: "implied", cycle: cycles[0x89] },
     "8D": { fullName: "STA_ABSOLUTE", baseName: "STA", mode: "absolute", cycle: cycles[0x8D] },
-    A0: { fullName: "LDY_IMMEDIATE", baseName: "LDY", mode: "immediate", cycle: cycles[0xA0] },
-    BD: { fullName: "LDA_ABSX", baseName: "LDA", mode: "absoluteX", cycle: cycles[0xBD] },
-    E8: { fullName: "INX", baseName: "INX", mode: "implied", cycle: cycles[0xE8] },
-    88: { fullName: "DEY", baseName: "DEY", mode: "implied", cycle: cycles[0x88] },
-    D0: { fullName: "BNE", baseName: "BNE", mode: "relative", cycle: cycles[0xD0] },
+    "A0": { fullName: "LDY_IMMEDIATE", baseName: "LDY", mode: "immediate", cycle: cycles[0xA0] },
+    "BD": { fullName: "LDA_ABSX", baseName: "LDA", mode: "absoluteX", cycle: cycles[0xBD] },
+    "E8": { fullName: "INX", baseName: "INX", mode: "implied", cycle: cycles[0xE8] },
+    "88": { fullName: "DEY", baseName: "DEY", mode: "implied", cycle: cycles[0x88] },
+    "D0": { fullName: "BNE", baseName: "BNE", mode: "relative", cycle: cycles[0xD0] },
     "4C": { fullName: "JMP_ABSOLUTE", baseName: "JMP", mode: "absolute", cycle: cycles[0x4C] },
     "00": { fullName: "BRK", baseName: "BRK", mode: "implied", cycle: cycles[0x00] }
 };
