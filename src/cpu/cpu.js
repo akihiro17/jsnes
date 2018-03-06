@@ -63,6 +63,7 @@ const instructions = {
     "29": { fullName: "AND_IMMEDIATE", baseName: "AND", mode: "immediate", cycle: cycles[0x29] },
     "CE": { fullName: "DEC_ABSOLUTE", baseName: "DEC", mode: "absolute", cycle: cycles[0xCE] },
     "EE": { fullName: "INC_ABSOLUTE", baseName: "INC", mode: "absolute", cycle: cycles[0xEE] },
+    "69": { fullName: "ADC_IMMEDIATE", baseName: "ADC", mode: "immediate", cycle: cycles[0x69] },
     "10": { fullName: "BPL", baseName: "BPL", mode: "relative", cycle: cycles[0x10] }
 };
 
@@ -283,6 +284,19 @@ export default class Cpu {
                 this.registers.P.negative = !!(decremented & 0x80);
                 this.registers.P.zero = !decremented;
                 this.write(addressOrData, decremented);
+                break;
+            }
+            case "ADC": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const operated = this.registers.A + data + this.registers.P.carry;
+                this.registers.P.negative = !!(operated & 0x80);
+                this.registers.P.zero = !(operated);
+                this.registers.P.carry = operated > 0xFF;
+                // 異符号の足し算、かつ演算結果の符号が違う場合オーバーフロー
+                // most significant bit(0x80)で判定できる
+                this.registers.P.overflow =
+                    !!(((this.registers.A ^ data) & 0x80) === 0) && !!(((this.registers.A ^ operated) & 0x80) === 1);
+                this.registers.A = operated & 0xFF;
                 break;
             }
             default: {

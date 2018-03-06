@@ -4,6 +4,7 @@ import Rom from "../rom/rom";
 import Ram from "../ram/ram";
 import Ppu from "../ppu/ppu";
 import KeyPad from "../key-pad/key-pad";
+import Dma from "../dma/dma";
 import type { Byte, Word } from "../types/common";
 
 export default class CpuBus {
@@ -11,12 +12,14 @@ export default class CpuBus {
     ram: Ram;
     ppu: Ppu;
     keypad: KeyPad
+    dma: Dma
 
-    constructor(progromROM: Rom, ppu: Ppu, keypad: KeyPad) {
+    constructor(progromROM: Rom, ram: Ram, ppu: Ppu, keypad: KeyPad, dma: Dma) {
         this.progromROM = progromROM;
-        this.ram = new Ram(2048);
+        this.ram = ram;
         this.ppu = ppu;
         this.keypad = keypad;
+        this.dma = dma;
     }
 
     readByCpu(address: Word): Byte {
@@ -52,6 +55,9 @@ export default class CpuBus {
             // ppu
             // console.log("ppu write:" + address.toString(16));
             this.ppu.write(address - 0x2000, data);
+        } else if (address === 0x4014) {
+            // dma
+            this.dma.write(data);
         } else if (address === 0x4016) {
 
             // keypad

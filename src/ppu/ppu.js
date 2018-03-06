@@ -311,7 +311,6 @@ export default class Ppu {
             return this.vramAddress - 0x3000;
         }
         return this.vramAddress - 0x2000;
-
     }
 
     setVblank() {
@@ -338,6 +337,10 @@ export default class Ppu {
 
     spriteTableOffset(): Word {
         return this.registers[0] & 0x08 ? 0x1000 : 0x0000;
-        // return 0x1000;
+    }
+
+    transferSprite(index: Byte, data: Byte) {
+        const address = this.spriteAddress + index;
+        this.spriteRam.write(address, data);
     }
 }
