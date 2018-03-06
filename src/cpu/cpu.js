@@ -110,13 +110,42 @@ export default class Cpu {
     }
 
     push(data: Byte) {
-        this.write(this.registers.SP | 0xFF, data);
+        // スタックポインタも16ビットのアドレス空間を指す必要があるのですが、上位8bitは0x01に固定されています
+        this.write(0x0100 | this.registers.SP & 0xFF, data);
         this.registers.SP -= 1;
     }
 
     pop(): Byte {
+        // スタックポインタも16ビットのアドレス空間を指す必要があるのですが、上位8bitは0x01に固定されています
         this.registers.SP += 1;
-        return this.read(this.registers.SP);
+        return this.read(0x0100 | this.registers.SP & 0xFF);
+    }
+
+    pushStatus() {
+        const status: Byte =
+              (+this.registers.P.negative) << 7 |
+              (+this.registers.P.overflow) << 6 |
+              (+this.registers.P.reserved) << 5 |
+              (+this.registers.P.break) << 4 |
+              (+this.registers.P.decimal) << 3 |
+              (+this.registers.P.interrupt) << 2 |
+              (+this.registers.P.zero) << 1 |
+              (+this.registers.P.carry);
+
+        this.push(status);
+    }
+
+    popStatus() {
+        const status = this.pop();
+
+        this.registers.P.negative = !!(status & 0x80);
+        this.registers.P.overflow = !!(status & 0x40);
+        this.registers.P.reserved = !!(status & 0x20);
+        this.registers.P.break = !!(status & 0x10);
+        this.registers.P.decimal = !!(status & 0x08);
+        this.registers.P.interrupt = !!(status & 0x04);
+        this.registers.P.zero = !!(status & 0x02);
+        this.registers.P.carry = !!(status & 0x01);
     }
 
     fetch(address: Word, size?: "Byte" | "Word"): Byte {
