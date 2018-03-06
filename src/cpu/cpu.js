@@ -60,6 +60,9 @@ const instructions = {
     "00": { fullName: "BRK", baseName: "BRK", mode: "implied", cycle: cycles[0x00] },
     "AD": { fullName: "LDA_ABSOLUTE", baseName: "LDA", mode: "absolute", cycle: cycles[0xAD] },
     "E0": { fullName: "CPX_IMMEDIATE", baseName: "CPX", mode: "immediate", cycle: cycles[0xE0] },
+    "29": { fullName: "AND_IMMEDIATE", baseName: "AND", mode: "immediate", cycle: cycles[0x29] },
+    "CE": { fullName: "DEC_ABSOLUTE", baseName: "DEC", mode: "absolute", cycle: cycles[0xCE] },
+    "EE": { fullName: "INC_ABSOLUTE", baseName: "INC", mode: "absolute", cycle: cycles[0xEE] },
     "10": { fullName: "BPL", baseName: "BPL", mode: "relative", cycle: cycles[0x10] }
 };
 
@@ -259,6 +262,29 @@ export default class Cpu {
                 this.registers.P.carry = compared >= 0;
                 break;
             }
+            case "AND": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const result = this.registers.A & data;
+                this.registers.P.negative = !!(result & 0x80);
+                this.registers.P.zero = !result;
+                break;
+            }
+            case "INC": {
+                const data = this.read(addressOrData);
+                const incremented = (data + 1) & 0xFF;
+                this.registers.P.negative = !!(incremented & 0x80);
+                this.registers.P.zero = !incremented;
+                this.write(addressOrData, incremented);
+                break;
+            }
+            case "DEC": {
+                const data = this.read(addressOrData);
+                const decremented = (data - 1) & 0xFF;
+                this.registers.P.negative = !!(decremented & 0x80);
+                this.registers.P.zero = !decremented;
+                this.write(addressOrData, decremented);
+                break;
+            }
             default: {
                 throw new Error(`Unknown instruction ${baseName} detected.`);
             }
@@ -276,8 +302,10 @@ export default class Cpu {
         // console.log("PC: " + this.registers.PC.toString(16));
         const opecode = this.fetch(this.registers.PC);
 
-        // console.log("opecode: " + opecode.toString(16));
         // console.log(instructions[opecode.toString(16).toUpperCase()]);
+        if (!instructions[opecode.toString(16).toUpperCase()]) {
+            throw "opecode: " + opecode.toString(16);
+        }
         const { fullName, baseName, mode, cycle } = instructions[opecode.toString(16).toUpperCase()];
         const addressOrData = this.getAddressOrData(mode);
 

@@ -7,6 +7,7 @@ import CpuBus from "../bus/cpu-bus";
 import PpuBus from "../bus/ppu-bus";
 import Cpu from "../cpu/cpu";
 import Ppu from "../ppu/ppu";
+import KeyPad from "../key-pad/key-pad";
 import CanvasRenderer from "../renderer/canvas-renderer";
 
 export default class Nes {
@@ -15,6 +16,7 @@ export default class Nes {
     renderer: CanvasRenderer;
     cpubus: CpuBus;
     ppubus: PpuBus;
+    keypad: KeyPad;
     frame: () => void;
 
     constructor() {
@@ -38,7 +40,10 @@ export default class Nes {
         this.ppubus = new PpuBus(characterRam);
         this.ppu = new Ppu(this.ppubus);
 
-        this.cpubus = new CpuBus(program, this.ppu);
+        // keypad
+        this.keypad = new KeyPad();
+
+        this.cpubus = new CpuBus(program, this.ppu, this.keypad);
         this.cpu = new Cpu(this.cpubus);
 
         this.cpu.reset();

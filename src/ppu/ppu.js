@@ -224,7 +224,7 @@ export default class Ppu {
             return;
         }
         if (address === 0x0004) {
-            console.log("sprite vram address: " + this.spriteAddress + " data: " + data);
+            // console.log("sprite vram address: " + this.spriteAddress + " data: " + data);
             this.spriteRam.write(this.spriteAddress, data);
             this.spriteAddress++;
             return;
@@ -242,14 +242,14 @@ export default class Ppu {
         if (address === 0x0007) {
 
             // PPUメモリデータ
-            console.log("ppu memory data: " + data + " to " + this.vramAddress.toString(16));
+            // console.log("ppu memory data: " + data + " to " + this.vramAddress.toString(16));
             this.writeVramData(data);
             return;
         }
 
         // PPUレジスタ
         if (0x0000 === address || address === 0x0001) {
-            console.log("ppu register: " + data + " to " + address);
+            // console.log("ppu register: " + data + " to " + address);
             this.registers[address] = data;
             return;
         }
