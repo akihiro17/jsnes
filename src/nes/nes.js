@@ -64,7 +64,9 @@ export default class Nes {
 
             if (this.dma.isDmaProcessing) {
                 this.dma.run();
-                // ?
+                // The CPU is suspended during the transfer, which will take 513 or 514 cycles after the $4014 write tick.
+                // (1 dummy read cycle while waiting for writes to complete, +1 if on an odd CPU cycle,
+                //  then 256 alternating read/write cycles.)
                 cycle = 514;
             }
 
