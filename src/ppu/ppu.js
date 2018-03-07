@@ -22,6 +22,8 @@ export type SpriteWithAttribute = $Exact<{
 export type Tile = $Exact<{
     sprite: Sprite;
     paletteId: Byte;
+    scrollX: Byte;
+    scrollY: Byte;
 }>
 
 export type RenderingData = $Exact<{
@@ -44,6 +46,9 @@ export default class Ppu {
     sprites: Array<SpriteWithAttribute>;
     registers: Uint8Array;
     interrupts: Interrupts;
+    scrollX: Byte;
+    scrollY: Byte;
+    isHorizontalScroll: boolean;
 
     constructor(ppuBus: PpuBus, interrupts: Interrupts) {
         this.cycle = 0;
@@ -59,6 +64,9 @@ export default class Ppu {
         this.sprites = [];
         this.registers = new Uint8Array(0x08);
         this.interrupts = interrupts;
+        this.scrollX = 0;
+        this.scrollY = 0;
+        this.isHorizontalScroll = true;
     }
 
     run(cycle: number): ?RenderingData {
@@ -73,7 +81,7 @@ export default class Ppu {
             this.cycle -= 341;
             this.line++;
 
-            if (this.line <= 240 && this.line % 8 === 0) {
+            if (this.line <= 240 && this.line % 8 === 0 && this.scrollY <= 240) {
                 this.buildBackground();
             }
 
@@ -104,13 +112,22 @@ export default class Ppu {
     buildBackground() {
         const clampedTileY = this.tileY() % 30;
 
+        // 1ブロックは、2x2タイル
+        // | 0 | 1 |
+        // | 2 | 3 |
+        // 1ブロックは32 x 30タイルだから、y座標が31~40タイルのときブロックIDのオフセットは2
+        const tableIdOffset = ((~~(this.tileY() / 30)) % 2) ? 2 : 0;
+
         if (clampedTileY > 30) {
             throw `clampedTileY: ${clampedTileY}`;
         }
 
         for (let x = 0; x < 32; x++) {
-            const clampedTileX = x % 32;
-            const tile = this.buildTile(clampedTileX, clampedTileY);
+            const tileX = x + this.scrollTileX();
+            const clampedTileX = tileX % 32;
+            const nameTableId = ~~(tileX / 32) % 2 + tableIdOffset;
+            const nameTableAddressOffset = nameTableId * 0x0400; // 0x400はネームテーブルと属性テーブルの合計サイズ
+            const tile = this.buildTile(clampedTileX, clampedTileY, nameTableAddressOffset);
 
             this.background.push(tile);
 
@@ -123,7 +140,7 @@ export default class Ppu {
         }
     }
 
-    buildTile(tileX: Byte, tileY: Byte) {
+    buildTile(tileX: Byte, tileY: Byte, offset: Word) {
 
         // console.log("tileX:" + tileX);
         // console.log("tileY:" + tileY);
@@ -136,9 +153,9 @@ export default class Ppu {
         // ブロック1: 01
         // ブロック2: 10
         // ブロック3: 11
-        const attr = this.getAttribute(tileX, tileY);
+        const attr = this.getAttribute(tileX, tileY, offset);
         const paletteId = (attr >> (blockId * 2)) & 0x03;
-        const spriteId = this.getSpriteId(tileX, tileY);
+        const spriteId = this.getSpriteId(tileX, tileY, offset);
         const sprite = this.buildSprite(spriteId, this.backgroundTableOffset());
 
         if (blockId) {
@@ -152,7 +169,9 @@ export default class Ppu {
         }
         return {
             sprite,
-            paletteId
+            paletteId,
+            scrollX: this.scrollX,
+            scrollY: this.scrollY
         };
     }
 
@@ -200,7 +219,27 @@ export default class Ppu {
     }
 
     tileY(): Byte {
-        return ~~(this.line / 8);
+        return ~~(this.line / 8) + this.scrollTileY();
+    }
+
+    scrollTileX(): Byte {
+        /*
+          Name table id and address
+          +------------+------------+
+          |            |            |
+          |  0(0x2000) |  1(0x2400) |
+          |            |            |
+          +------------+------------+
+          |            |            |
+          |  2(0x2800) |  3(0x2C00) |
+          |            |            |
+          +------------+------------+
+        */
+        return ~~(this.scrollX + ((this.nameTableId() % 2 ) * 256) / 8);
+    }
+
+    scrollTileY(): Byte {
+        return ~~(this.scrollY + ((this.nameTableId() % 2 ) * 240) / 8);
     }
 
     // 1ブロックは、2x2タイル
@@ -210,14 +249,14 @@ export default class Ppu {
         return ~~(tileX % 4 / 2) + ~~(tileY % 4 / 2) * 2;
     }
 
-    getSpriteId(tileX: Byte, tileY: Byte): Byte {
-        const address = tileY * 32 + tileX;
+    getSpriteId(tileX: Byte, tileY: Byte, offset: Word): Byte {
+        const address = tileY * 32 + tileX + offset;
 
         return this.vram.read(address);
     }
 
-    getAttribute(tileX: Byte, tileY: Byte): Byte {
-        const address = ~~(tileX / 4) + (~~(tileY / 4) * 8) + 0x03c0;
+    getAttribute(tileX: Byte, tileY: Byte, offset: Word): Byte {
+        const address = ~~(tileX / 4) + (~~(tileY / 4) * 8) + 0x03c0 + offset;
 
         return this.vram.read(address);
     }
@@ -238,6 +277,8 @@ export default class Ppu {
             return;
         }
         if (address === 0x0005) {
+            console.log(`scroll: ${data}`);
+            this.writeScrollData(data);
             return;
         }
         if (address === 0x0006) {
@@ -267,6 +308,7 @@ export default class Ppu {
 
     read(address: Word): Byte {
         if (address === 0x0002) {
+            this.isHorizontalScroll = true;
             const data = this.registers[0x02];
             this.clearVblank();
             return data;
@@ -312,6 +354,16 @@ export default class Ppu {
         this.vram.write(address, data);
     }
 
+    writeScrollData(data: Byte) {
+        if (this.isHorizontalScroll) {
+            this.scrollX = data & 0xFF;
+            this.isHorizontalScroll = false;
+        } else {
+            this.scrollY = data & 0xFF;
+            this.isHorizontalScroll = true;
+        }
+    }
+
     calculateAddress(): Byte {
         if (this.vramAddress >= 0x3000 && this.vramAddress < 0x3f00) {
 
@@ -349,6 +401,10 @@ export default class Ppu {
 
     vBlankIrqEnabled(): boolean {
         return !!(this.registers[0] & 0x80);
+    }
+
+    nameTableId(): Byte {
+        return this.registers[0x00] & 0x03;
     }
 
     transferSprite(index: Byte, data: Byte) {

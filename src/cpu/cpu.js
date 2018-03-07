@@ -66,6 +66,11 @@ const instructions = {
     "EE": { fullName: "INC_ABSOLUTE", baseName: "INC", mode: "absolute", cycle: cycles[0xEE] },
     "69": { fullName: "ADC_IMMEDIATE", baseName: "ADC", mode: "immediate", cycle: cycles[0x69] },
     "60": { fullName: "RTS", baseName: "RTS", mode: "implied", cycle: cycles[0x60] },
+    "40": { fullName: "RTI", baseName: "RTI", mode: "implied", cycle: cycles[0x40] },
+    "49": { fullName: "EOR_IMMEDIATE", baseName: "EOR", mode: "immediate", cycle: cycles[0x49] },
+    "55": { fullName: 'EOR_ZEROX', baseName: 'EOR', mode: 'zeroPageX', cycle: cycles[0x55] },
+    'BE': { fullName: 'LDX_ABSY', baseName: 'LDX', mode: 'absoluteY', cycle: cycles[0xBE] },
+    'CA': { fullName: 'DEX', baseName: 'DEX', mode: 'implied', cycle: cycles[0xCA] },
     "10": { fullName: "BPL", baseName: "BPL", mode: "relative", cycle: cycles[0x10] }
 };
 
@@ -91,6 +96,8 @@ export default class Cpu {
     registers: Registers;
     bus: CpuBus
     interrupts: Interrupts;
+    prev: number;
+    prev2: number;
 
     constructor(bus: CpuBus, interrupts: Interrupts) {
         this.registers = {
@@ -99,6 +106,8 @@ export default class Cpu {
         };
         this.bus = bus;
         this.interrupts = interrupts;
+        this.prev = 0;
+        this.prev2 = 0;
     }
 
     read(address: Word, size?: "Byte" | "Word"): Byte {
@@ -172,11 +181,17 @@ export default class Cpu {
             case "zeroPage": {
                 return this.fetch(this.registers.PC);
             }
+            case "zeroPageX": {
+                return (this.fetch(this.registers.PC) + this.registers.X) & 0xFFFF;
+            }
             case "absolute": {
                 return this.fetch(this.registers.PC, "Word");
             }
             case "absoluteX": {
                 return (this.fetch(this.registers.PC, "Word") + this.registers.X) & 0xFFFF;
+            }
+            case "absoluteY": {
+                return (this.fetch(this.registers.PC, "Word") + this.registers.Y) & 0xFFFF;
             }
             case "relative": {
                 const base = this.fetch(this.registers.PC);
@@ -206,6 +221,7 @@ export default class Cpu {
                 } else {
                     this.registers.X = this.read(addressOrData);
                 }
+                console.log(`LDX: ${this.registers.X}`);
                 this.registers.P.negative = !!(this.registers.X & 0x80);
                 this.registers.P.zero = !this.registers.X;
                 break;
@@ -272,7 +288,7 @@ export default class Cpu {
                 break;
             }
             case "BNE": {
-                if (this.registers.P.zero === false) {
+                if (!this.registers.P.zero) {
                     this.registers.PC = addressOrData;
                 }
                 break;
@@ -301,6 +317,7 @@ export default class Cpu {
                 const result = this.registers.A & data;
                 this.registers.P.negative = !!(result & 0x80);
                 this.registers.P.zero = !result;
+                this.registers.A = result & 0xFF;
                 break;
             }
             case "INC": {
@@ -338,6 +355,27 @@ export default class Cpu {
                 this.registers.PC++;
                 break;
             }
+            case "RTI": {
+                this.popStatus();
+                this.registers.PC = this.pop(); // 下位バイト
+                this.registers.PC += this.pop() << 8; // 上位バイト
+                this.registers.P.reserved = true;
+                break;
+            }
+            case "EOR": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const result = this.registers.A ^ data;
+                this.registers.P.negative = !!(result & 0x80);
+                this.registers.P.zero = !result;
+                this.registers.A = result & 0xFF;
+                break;
+            }
+            case "DEX": {
+                this.registers.X = (this.registers.X - 1) & 0xFF;
+                this.registers.P.negative = !!(this.registers.X & 0x80);
+                this.registers.P.zero = !this.registers.X;
+                break;
+            }
             default: {
                 throw new Error(`Unknown instruction ${baseName} detected.`);
             }
@@ -372,7 +410,7 @@ export default class Cpu {
 
         // console.log(instructions[opecode.toString(16).toUpperCase()]);
         if (!instructions[opecode.toString(16).toUpperCase()]) {
-            throw "opecode: " + opecode.toString(16);
+            throw "opecode: " + opecode.toString(16) + " prev: " + this.prev.toString(16) + " " + this.prev2.toString(16);
         }
         const { fullName, baseName, mode, cycle } = instructions[opecode.toString(16).toUpperCase()];
         const addressOrData = this.getAddressOrData(mode);
@@ -380,6 +418,9 @@ export default class Cpu {
         // console.log("addressOrdata:" + addressOrData.toString(16));
 
         this.execInstruction(baseName, mode, addressOrData);
+
+        this.prev2 = this.prev;
+        this.prev = opecode;
 
         return cycle;
     }
