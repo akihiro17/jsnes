@@ -2,6 +2,7 @@
 
 import Ram from "../ram/ram";
 import PpuBus from "../bus/ppu-bus";
+import Interrupts from "../interrupts/interrupts";
 import type { Byte, Word } from "../types/common";
 
 // スプライトRAMは256バイトが存在します
@@ -42,8 +43,9 @@ export default class Ppu {
     spriteRam: Ram;
     sprites: Array<SpriteWithAttribute>;
     registers: Uint8Array;
+    interrupts: Interrupts;
 
-    constructor(ppuBus: PpuBus) {
+    constructor(ppuBus: PpuBus, interrupts: Interrupts) {
         this.cycle = 0;
         this.line = 0;
         this.vram = new Ram(0x2000);
@@ -56,6 +58,7 @@ export default class Ppu {
         this.spriteRam = new Ram(0x100);
         this.sprites = [];
         this.registers = new Uint8Array(0x08);
+        this.interrupts = interrupts;
     }
 
     run(cycle: number): ?RenderingData {
@@ -76,6 +79,11 @@ export default class Ppu {
 
             if (this.line === 241) {
                 this.setVblank();
+
+                // vBlank割り込み
+                if (this.vBlankIrqEnabled()) {
+                    this.interrupts.assertNmi();
+                }
             }
 
             // 20ライン分Vblankという期間が設けられています
@@ -337,6 +345,10 @@ export default class Ppu {
 
     spriteTableOffset(): Word {
         return this.registers[0] & 0x08 ? 0x1000 : 0x0000;
+    }
+
+    vBlankIrqEnabled(): boolean {
+        return !!(this.registers[0] & 0x80);
     }
 
     transferSprite(index: Byte, data: Byte) {

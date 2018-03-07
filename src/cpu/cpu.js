@@ -1,6 +1,7 @@
 /** @flow*/
 
 import CpuBus from "../bus/cpu-bus";
+import Interrupts from "../interrupts/interrupts";
 import type { Byte, Word } from "../types/common";
 
 interface CpuStatus {
@@ -64,6 +65,7 @@ const instructions = {
     "CE": { fullName: "DEC_ABSOLUTE", baseName: "DEC", mode: "absolute", cycle: cycles[0xCE] },
     "EE": { fullName: "INC_ABSOLUTE", baseName: "INC", mode: "absolute", cycle: cycles[0xEE] },
     "69": { fullName: "ADC_IMMEDIATE", baseName: "ADC", mode: "immediate", cycle: cycles[0x69] },
+    "60": { fullName: "RTS", baseName: "RTS", mode: "implied", cycle: cycles[0x60] },
     "10": { fullName: "BPL", baseName: "BPL", mode: "relative", cycle: cycles[0x10] }
 };
 
@@ -88,13 +90,15 @@ const defaultRegisters: Registers = {
 export default class Cpu {
     registers: Registers;
     bus: CpuBus
+    interrupts: Interrupts;
 
-    constructor(bus: CpuBus) {
+    constructor(bus: CpuBus, interrupts: Interrupts) {
         this.registers = {
             ...defaultRegisters,
             P: { ...defaultRegisters.P }
         };
         this.bus = bus;
+        this.interrupts = interrupts;
     }
 
     read(address: Word, size?: "Byte" | "Word"): Byte {
@@ -328,6 +332,12 @@ export default class Cpu {
                 this.registers.A = operated & 0xFF;
                 break;
             }
+            case "RTS": {
+                this.registers.PC = this.pop(); // 下位バイト
+                this.registers.PC += this.pop() << 8; // 上位バイト
+                this.registers.PC++;
+                break;
+            }
             default: {
                 throw new Error(`Unknown instruction ${baseName} detected.`);
             }
@@ -340,7 +350,22 @@ export default class Cpu {
         this.registers.PC = pc;
     }
 
+    processNmi() {
+        // 割り込みが確認された時、割り込み動作を開始します
+        // Bフラグをクリアし、PCの上位バイト、 下位バイト、ステータスレジスタを順にスタックへ格納します
+        // 次にIフラグをセットし、最後にPCの下位バイトを$FFFAから、上位バイトを$FFFBからフェッチします
+        this.registers.P.break = false;
+        this.push((this.registers.PC >> 8) && 0xFF);
+        this.push(this.registers.PC && 0xFF);
+        this.pushStatus();
+        this.registers.P.interrupt = true;
+        this.registers.PC = this.read(0xFFFA, "Word");
+    }
+
     run(): number {
+        if (this.interrupts.isNmiAssert()) {
+            this.processNmi();
+        }
 
         // console.log("PC: " + this.registers.PC.toString(16));
         const opecode = this.fetch(this.registers.PC);

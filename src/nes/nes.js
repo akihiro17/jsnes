@@ -9,6 +9,7 @@ import Cpu from "../cpu/cpu";
 import Ppu from "../ppu/ppu";
 import KeyPad from "../key-pad/key-pad";
 import Dma from "../dma/dma";
+import Interrupts from "../interrupts/interrupts";
 import CanvasRenderer from "../renderer/canvas-renderer";
 
 export default class Nes {
@@ -19,6 +20,7 @@ export default class Nes {
     ppubus: PpuBus;
     keypad: KeyPad;
     dma: Dma;
+    interrupts: Interrupts;
     frame: () => void;
 
     constructor() {
@@ -40,7 +42,8 @@ export default class Nes {
             characterRam.write(i, characterROM[i]);
         }
         this.ppubus = new PpuBus(characterRam);
-        this.ppu = new Ppu(this.ppubus);
+        this.interrupts = new Interrupts();
+        this.ppu = new Ppu(this.ppubus, this.interrupts);
 
         // ram
         const ram = new Ram(0x800);
@@ -52,7 +55,7 @@ export default class Nes {
         this.dma = new Dma(this.ppu, ram);
 
         this.cpubus = new CpuBus(program, ram, this.ppu, this.keypad, this.dma);
-        this.cpu = new Cpu(this.cpubus);
+        this.cpu = new Cpu(this.cpubus, this.interrupts);
 
         this.cpu.reset();
 
