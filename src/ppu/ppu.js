@@ -90,6 +90,7 @@ export default class Ppu {
 
                 // vBlank割り込み
                 if (this.vBlankIrqEnabled()) {
+                    console.log("vBlank interrupt");
                     this.interrupts.assertNmi();
                 }
             }
@@ -98,6 +99,8 @@ export default class Ppu {
             // Vblank の前後に post-render/pre-render scanlineというアイドル状態が存在するため、262ライン分の描画期間が必要となります
             if (this.line === 262) {
                 this.line = 0;
+                this.clearVblank();
+                this.interrupts.deassertNmi();
                 return {
                     background: this.background,
                     palette: this.palette,
@@ -298,7 +301,7 @@ export default class Ppu {
 
         // PPUレジスタ
         if (0x0000 === address || address === 0x0001) {
-            // console.log("ppu register: " + data + " to " + address);
+            console.log("ppu register: " + data.toString(2) + " to " + address);
             this.registers[address] = data;
             return;
         }

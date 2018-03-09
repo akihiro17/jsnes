@@ -8,14 +8,14 @@ import Dma from "../dma/dma";
 import type { Byte, Word } from "../types/common";
 
 export default class CpuBus {
-    progromROM: Rom;
+    programROM: Rom;
     ram: Ram;
     ppu: Ppu;
     keypad: KeyPad
     dma: Dma
 
-    constructor(progromROM: Rom, ram: Ram, ppu: Ppu, keypad: KeyPad, dma: Dma) {
-        this.progromROM = progromROM;
+    constructor(programROM: Rom, ram: Ram, ppu: Ppu, keypad: KeyPad, dma: Dma) {
+        this.programROM = programROM;
         this.ram = ram;
         this.ppu = ppu;
         this.keypad = keypad;
@@ -36,8 +36,17 @@ export default class CpuBus {
         else if (address === 0x4016) {
             return +this.keypad.read(); // convert boolean into nubmer
         }
+        else if (address >= 0xC000) {
+
+            // Mirror, if prom block number equals 1
+            if (this.programROM.size() <= 0x4000) {
+                return this.programROM.read(address - 0xC000);
+            }
+            // ブロックが2つの場合はミラーじゃない
+            return this.programROM.read(address - 0x8000);
+        }
         else if (address >= 0x8000) {
-            return this.progromROM.read(address - 0x8000);
+            return this.programROM.read(address - 0x8000);
         }
 
         // Cannot expect `Byte` as the return type of function because number [1] is incompatible with implicitly-returned

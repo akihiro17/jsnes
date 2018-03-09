@@ -71,6 +71,9 @@ const instructions = {
     "55": { fullName: 'EOR_ZEROX', baseName: 'EOR', mode: 'zeroPageX', cycle: cycles[0x55] },
     'BE': { fullName: 'LDX_ABSY', baseName: 'LDX', mode: 'absoluteY', cycle: cycles[0xBE] },
     'CA': { fullName: 'DEX', baseName: 'DEX', mode: 'implied', cycle: cycles[0xCA] },
+    '98': { fullName: 'TYA', baseName: 'TYA', mode: 'implied', cycle: cycles[0x98] },
+    'C8': { fullName: 'INY', baseName: 'INY', mode: 'implied', cycle: cycles[0xC8] },
+    "C0": { fullName: "CPY_IMMEDIATE", baseName: "CPY", mode: "immediate", cycle: cycles[0xC0] },
     "10": { fullName: "BPL", baseName: "BPL", mode: "relative", cycle: cycles[0x10] }
 };
 
@@ -123,6 +126,7 @@ export default class Cpu {
     }
 
     push(data: Byte) {
+        // console.log(`push ${data}`);
         // スタックポインタも16ビットのアドレス空間を指す必要があるのですが、上位8bitは0x01に固定されています
         this.write(0x0100 | this.registers.SP & 0xFF, data);
         this.registers.SP -= 1;
@@ -221,7 +225,6 @@ export default class Cpu {
                 } else {
                     this.registers.X = this.read(addressOrData);
                 }
-                console.log(`LDX: ${this.registers.X}`);
                 this.registers.P.negative = !!(this.registers.X & 0x80);
                 this.registers.P.zero = !this.registers.X;
                 break;
@@ -278,6 +281,12 @@ export default class Cpu {
                 this.registers.P.zero = !this.registers.X;
                 break;
             }
+            case "INY": {
+                this.registers.Y = (this.registers.Y + 1) & 0xFF;
+                this.registers.P.negative = !!(this.registers.Y & 0x80);
+                this.registers.P.zero = !this.registers.Y;
+                break;
+            }
             case "DEY": {
                 this.registers.Y = (this.registers.Y - 1) & 0xFF;
                 this.registers.P.negative = !!(this.registers.Y & 0x80);
@@ -285,6 +294,24 @@ export default class Cpu {
                 break;
             }
             case "BRK": {
+                // 割り込みが確認された時、Iフラグがセットされていれば割り込みは無視します。
+                // Iフラグがクリアされていれば、割り込み動作を開始します。BRKでは、Bフラグをセットし、PCに1を加算します。
+                // 次にPCの上位バイト、下位バイト、ステータスレジスタを順にスタックへ格納します。
+                // 次にIフラグをセットし、最後にPCの下位バイトを$FFFEから、上位バイトを$FFFFからフェッチします。
+                // IRQと異なる点はBフラグとPCの扱いのみで、あとは同じです。
+                // BRKではPCに1を加算するため、BRK命令のあるアドレス+2番地がリターンアドレスとなります。
+                const interrupt = this.registers.P.interrupt;
+                this.registers.PC++;
+                this.push((this.registers.PC >> 8) & 0xFF);
+                this.push(this.registers.PC & 0xFF);
+                this.registers.P.break = true;
+                this.pushStatus();
+                this.registers.P.interrupt = true;
+                // Ignore interrupt when already set.
+                if (!interrupt) {
+                    this.registers.PC = this.read(0xFFFE, "Word");
+                }
+                this.registers.PC--;
                 break;
             }
             case "BNE": {
@@ -306,6 +333,15 @@ export default class Cpu {
             case "CPX": {
                 const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
                 const compared = this.registers.X - data;
+                this.registers.P.negative = !!(compared & 0x80);
+                this.registers.P.zero = !compared;
+                // ?
+                this.registers.P.carry = compared >= 0;
+                break;
+            }
+            case "CPY": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const compared = this.registers.Y - data;
                 this.registers.P.negative = !!(compared & 0x80);
                 this.registers.P.zero = !compared;
                 // ?
@@ -376,6 +412,12 @@ export default class Cpu {
                 this.registers.P.zero = !this.registers.X;
                 break;
             }
+            case "TYA": {
+                this.registers.A = this.registers.Y;
+                this.registers.P.negative = !!(this.registers.A & 0x80);
+                this.registers.P.zero = !this.registers.A;
+                break;
+            }
             default: {
                 throw new Error(`Unknown instruction ${baseName} detected.`);
             }
@@ -389,15 +431,20 @@ export default class Cpu {
     }
 
     processNmi() {
+        // console.log("----process nmi-----");
+        this.interrupts.deassertNmi();
         // 割り込みが確認された時、割り込み動作を開始します
         // Bフラグをクリアし、PCの上位バイト、 下位バイト、ステータスレジスタを順にスタックへ格納します
         // 次にIフラグをセットし、最後にPCの下位バイトを$FFFAから、上位バイトを$FFFBからフェッチします
         this.registers.P.break = false;
-        this.push((this.registers.PC >> 8) && 0xFF);
-        this.push(this.registers.PC && 0xFF);
+        // console.log("should return to : " + this.registers.PC.toString(16));
+        this.push((this.registers.PC >> 8) & 0xFF);
+        this.push(this.registers.PC & 0xFF);
         this.pushStatus();
         this.registers.P.interrupt = true;
         this.registers.PC = this.read(0xFFFA, "Word");
+        // console.log("PC: " + this.registers.PC.toString(16));
+        // console.log("----process nmi end-----");
     }
 
     run(): number {
@@ -408,9 +455,13 @@ export default class Cpu {
         // console.log("PC: " + this.registers.PC.toString(16));
         const opecode = this.fetch(this.registers.PC);
 
+        if (!opecode) {
+            throw `${this.registers.PC.toString(16)}: opecode is not defiend`;
+        }
+
         // console.log(instructions[opecode.toString(16).toUpperCase()]);
         if (!instructions[opecode.toString(16).toUpperCase()]) {
-            throw "opecode: " + opecode.toString(16) + " prev: " + this.prev.toString(16) + " " + this.prev2.toString(16);
+            throw "opecode: " + opecode.toString(16);
         }
         const { fullName, baseName, mode, cycle } = instructions[opecode.toString(16).toUpperCase()];
         const addressOrData = this.getAddressOrData(mode);
@@ -418,9 +469,6 @@ export default class Cpu {
         // console.log("addressOrdata:" + addressOrData.toString(16));
 
         this.execInstruction(baseName, mode, addressOrData);
-
-        this.prev2 = this.prev;
-        this.prev = opecode;
 
         return cycle;
     }
