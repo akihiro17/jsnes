@@ -12,7 +12,7 @@ export default class Apu {
     sequencerMode: number;
     enableIrq: boolean;
     pulses: Pulse[];
-    registers Uint8Array;
+    registers: Uint8Array;
 
     constructor() {
         this.cycle = 0;

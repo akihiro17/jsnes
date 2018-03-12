@@ -1,5 +1,6 @@
 /** @flow*/
 
+import Oscillator from "./oscillator";
 import type { Byte } from "../types/common";
 
 const global_gain = 0.01;
@@ -32,19 +33,24 @@ export default class Pulse {
     isLengthCounterEnabled: boolean;
     lengthCounter: number;
     isSweepEnabled: boolean;
-    sweepmode: boolean;
+    sweepmode: boolean; // スイープ方向
     sweepUnitCounter: number;
     sweepUnitDiviser: number; // スイープ周期
     sweepShiftAmount: number; // スイープ量
     dividerForFrequency: number; // チャンネル周期
     frequency: number;
+    oscillator: Oscillator;
 
     constructor() {
+        // ?
         this.envelopeGeneratorCounter = 0;
         this.envelopeRate = 0x0F;
         this.envelopeEnable = false;
 
         this.sweepUnitCounter = 0;
+
+        this.oscillator = new Oscillator();
+        this.oscillator.setVolume(1);
     }
 
     updateEnvelope() {
@@ -66,7 +72,7 @@ export default class Pulse {
             }
         }
 
-        // TODO: oscillator
+        this.oscillator.setVolume(this.volume);
     }
 
     updateSweepAndLengthCounter() {
@@ -74,7 +80,7 @@ export default class Pulse {
         if (this.isLengthCounterEnabled && this.lengthCounter > 0) {
             this.lengthCounter--;
             if (this.lengthCounter === 0) {
-                // oscillator
+                this.oscillator.stop();
             }
         }
 
@@ -103,15 +109,15 @@ export default class Pulse {
                 // なぜ2倍?
                 if (this.frequency > 4095) {
                     this.frequency = 4095;
-                    // oscillator
+                    this.oscillator.stop();
                 }
                 else if (this.frequency < 16) {
                     this.frequency = 16;
-                    // oscillator
+                    this.oscillator.stop();
                 }
             }
 
-            // oscillator
+            this.oscillator.changeFrequency(this.frequency);
         }
     }
 
@@ -195,6 +201,8 @@ export default class Pulse {
     get volume(): number {
         const vol = this.enableEnvelope ?  this.envelopeVolume : this.envelopeRate;
 
+        // 0 ~ 1の範囲にする
+        // envelopeVolumeもenvelopeRateもとちらも4ビット
         return (vol * global_gain) / 0x0F;
     }
 }

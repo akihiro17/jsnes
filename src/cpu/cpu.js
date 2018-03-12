@@ -74,6 +74,7 @@ const instructions = {
     '98': { fullName: 'TYA', baseName: 'TYA', mode: 'implied', cycle: cycles[0x98] },
     'C8': { fullName: 'INY', baseName: 'INY', mode: 'implied', cycle: cycles[0xC8] },
     "C0": { fullName: "CPY_IMMEDIATE", baseName: "CPY", mode: "immediate", cycle: cycles[0xC0] },
+    "3C": { fullName: 'NOPI', baseName: 'NOPI', mode: 'implied', cycle: cycles[0x3C] },
     "10": { fullName: "BPL", baseName: "BPL", mode: "relative", cycle: cycles[0x10] }
 };
 
@@ -322,6 +323,10 @@ export default class Cpu {
             }
             case "NOPD": {
                 this.registers.PC++;
+                break;
+            }
+            case "NOPI": {
+                this.registers.PC += 2;
                 break;
             }
             case "BPL": {
