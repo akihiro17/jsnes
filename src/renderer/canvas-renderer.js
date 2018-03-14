@@ -67,8 +67,8 @@ export default class CanvasRenderer {
                 const color = colors[colorId];
 
                 if (color === undefined) {
-                    console.log(`spriteId: ${sprite[i][j]}`)
-                    console.log(`paletteId: ${paletteId}`)
+                    console.log(`spriteId: ${sprite[i][j]}`);
+                    console.log(`paletteId: ${paletteId}`);
                     console.log(`color id: ${colorId}`);
                 }
 

@@ -20,7 +20,7 @@ export default class Apu {
         this.cycle = 0;
         this.step = 0;
         this.enableIrq = false;
-        this.pulses = [new Pulse()];
+        this.pulses = [new Pulse(), new Pulse()];
         // this.pulses = [];
         // 0x4000 ~ 0x4017
         this.registers = new Uint8Array(0x18);
@@ -124,8 +124,7 @@ export default class Apu {
             this.pulses[0].write(address, data);
         }
         else if (address <= 0x07) {
-            // this.pulses[1] = new Pulse();
-            // this.pulses[1].write(address - 0x04, data);
+            this.pulses[1].write(address - 0x04, data);
         }
         else if (address === 0x17) {
             // frame counter

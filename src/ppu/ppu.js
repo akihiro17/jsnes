@@ -301,7 +301,7 @@ export default class Ppu {
 
         // PPUレジスタ
         if (0x0000 === address || address === 0x0001) {
-            console.log("ppu register: " + data.toString(2) + " to " + address);
+            // console.log("ppu register: " + data.toString(2) + " to " + address);
             this.registers[address] = data;
             return;
         }
@@ -340,7 +340,7 @@ export default class Ppu {
             if (this.vramAddress >= 0x3F00 && this.vramAddress < 0x4000) {
                 // console.log("palette write");
                 if (data > 64) {
-                    throw "palette";
+                    throw `address: ${this.vramAddress - 0x3F00}, data: ${data}`;
                 }
                 this.palette[this.vramAddress - 0x3F00] = data;
             } else {
