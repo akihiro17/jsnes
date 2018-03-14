@@ -75,6 +75,18 @@ const instructions = {
     'C8': { fullName: 'INY', baseName: 'INY', mode: 'implied', cycle: cycles[0xC8] },
     "C0": { fullName: "CPY_IMMEDIATE", baseName: "CPY", mode: "immediate", cycle: cycles[0xC0] },
     "3C": { fullName: 'NOPI', baseName: 'NOPI', mode: 'implied', cycle: cycles[0x3C] },
+    "18": { fullName: 'CLC', baseName: 'CLC', mode: 'implied', cycle: cycles[0x18] },
+    "A5": { fullName: "LDY_ZERO", baseName: "LDY", mode: "zeroPage", cycle: cycles[0xA5] },
+    "E6": { fullName: "SBC_ZERO", baseName: "SBC", mode: "zeroPage", cycle: cycles[0xE6] },
+    "F0": { fullName: "BEQ", baseName: "BEQ", mode: "relative", cycle: cycles[0xF0] },
+    "9": { fullName: "ORA", baseName: "ORA", mode: "relative", cycle: cycles[0x09] },
+    "C6": { fullName: "CMP_ZERO", baseName: "CMP", mode: "zeroPage", cycle: cycles[0xC6] },
+    'D8': { fullName: 'CLD', baseName: 'CLD', mode: 'implied', cycle: cycles[0xD8] },
+    '8E': { fullName: 'STX_ABS', baseName: 'STX', mode: 'absolute', cycle: cycles[0x8E] },
+    '8C': { fullName: 'STY_ABS', baseName: 'STY', mode: 'absolute', cycle: cycles[0x8C] },
+    'F5': { fullName: 'SBC_ZEROX', baseName: 'SBC', mode: 'zeroPageX', cycle: cycles[0xF5] },
+    'B1': { fullName: 'LDA_INDY', baseName: 'LDA', mode: 'postIndexedIndirect', cycle: cycles[0xB1] },
+    'C9': { fullName: 'CMP_IMM', baseName: 'CMP', mode: 'immediate', cycle: cycles[0xC9] },
     "10": { fullName: "BPL", baseName: "BPL", mode: "relative", cycle: cycles[0x10] }
 };
 
@@ -206,7 +218,15 @@ export default class Cpu {
                     return base + offset;
                 }
                 return base + offset - 0x100;
-
+            }
+            case "postIndexedIndirect": {
+                // まず上位アドレスを$00とし、下位アドレスとして2番目のバイトを使用します。
+                // このアドレスに格納されている値を次の上位アドレス、 その次のアドレスに格納されている値を次の下位アドレスとします。
+                // このときのインクリメントにおけるキャリーは無視します。 得られたアドレスにインデックスレジスタYを加算（16）したものを実効アドレスとします
+                const addrOrData = this.fetch(this.registers.PC);
+                const baseAddr = this.read(addrOrData) + (this.read((addrOrData + 1) & 0xFF) << 8);
+                const addr = baseAddr + this.registers.Y;
+                return addr;
             }
             default: {
                 throw new Error(`Unknown addressing mode ${mode} detected.`);
@@ -218,6 +238,10 @@ export default class Cpu {
         switch (baseName) {
             case "SEI": {
                 this.registers.P.interrupt = false;
+                break;
+            }
+            case "CLD": {
+                this.registers.P.decimal = false;
                 break;
             }
             case "LDX": {
@@ -258,6 +282,14 @@ export default class Cpu {
             }
             case "STA": {
                 this.write(addressOrData, this.registers.A);
+                break;
+            }
+            case "STX": {
+                this.write(addressOrData, this.registers.X);
+                break;
+            }
+            case "STY": {
+                this.write(addressOrData, this.registers.Y);
                 break;
             }
             case "JSR": {
@@ -321,6 +353,12 @@ export default class Cpu {
                 }
                 break;
             }
+            case "BEQ": {
+                if (this.registers.P.zero) {
+                    this.registers.PC = addressOrData;
+                }
+                break;
+            }
             case "NOPD": {
                 this.registers.PC++;
                 break;
@@ -347,6 +385,15 @@ export default class Cpu {
             case "CPY": {
                 const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
                 const compared = this.registers.Y - data;
+                this.registers.P.negative = !!(compared & 0x80);
+                this.registers.P.zero = !compared;
+                // ?
+                this.registers.P.carry = compared >= 0;
+                break;
+            }
+            case "CMP": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const compared = this.registers.A - data;
                 this.registers.P.negative = !!(compared & 0x80);
                 this.registers.P.zero = !compared;
                 // ?
@@ -390,6 +437,20 @@ export default class Cpu {
                 this.registers.A = operated & 0xFF;
                 break;
             }
+            case "SBC": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                // A - M - not C -> A
+                const operated = this.registers.A - data - (this.registers.P.carry ? 0 : 1);
+                this.registers.P.negative = !!(operated & 0x80);
+                this.registers.P.zero = !(operated);
+                this.registers.P.carry = operated > 0xFF;
+                // 異符号の足し算、かつ演算結果の符号が違う場合オーバーフロー
+                // most significant bit(0x80)で判定できる
+                this.registers.P.overflow =
+                    !!(((this.registers.A ^ data) & 0x80) === 0) && !!(((this.registers.A ^ operated) & 0x80) === 1);
+                this.registers.A = operated & 0xFF;
+                break;
+            }
             case "RTS": {
                 this.registers.PC = this.pop(); // 下位バイト
                 this.registers.PC += this.pop() << 8; // 上位バイト
@@ -411,6 +472,14 @@ export default class Cpu {
                 this.registers.A = result & 0xFF;
                 break;
             }
+            case "ORA": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const result = this.registers.A | data;
+                this.registers.P.negative = !!(result & 0x80);
+                this.registers.P.zero = !result;
+                this.registers.A = result & 0xFF;
+                break;
+            }
             case "DEX": {
                 this.registers.X = (this.registers.X - 1) & 0xFF;
                 this.registers.P.negative = !!(this.registers.X & 0x80);
@@ -421,6 +490,10 @@ export default class Cpu {
                 this.registers.A = this.registers.Y;
                 this.registers.P.negative = !!(this.registers.A & 0x80);
                 this.registers.P.zero = !this.registers.A;
+                break;
+            }
+            case "CLC": {
+                this.registers.P.carry = false;
                 break;
             }
             default: {
@@ -436,7 +509,7 @@ export default class Cpu {
     }
 
     processNmi() {
-        // console.log("----process nmi-----");
+        console.log("----process nmi-----");
         this.interrupts.deassertNmi();
         // 割り込みが確認された時、割り込み動作を開始します
         // Bフラグをクリアし、PCの上位バイト、 下位バイト、ステータスレジスタを順にスタックへ格納します
@@ -452,26 +525,55 @@ export default class Cpu {
         // console.log("----process nmi end-----");
     }
 
+    processIrq() {
+        /*
+          割り込みが確認された時、Iフラグがセットされていれば割り込みは無視します。
+          Iフラグがクリアされていれば、割り込み動作を開始します。BRK割り込みと区別するためにBフラグはクリアします。
+          次にPCの上位バイト、下位バイト、ステータスレジスタを順にスタックへ格納します。
+          次にIフラグをセットし、最後にPCの下位バイトを$FFFEから、上位バイトを$FFFFからフェッチします。
+          NMIと異なる点は、Iフラグによる無効化とベクタです。
+        */
+        if (this.registers.P.interrupt) {
+            return;
+        }
+        this.interrupts.deassertIrq();
+
+        console.log("----process irq-----");
+
+        this.registers.P.break = false;
+        this.push((this.registers.PC >> 8) & 0xFF);
+        this.push(this.registers.PC & 0xFF);
+        this.pushStatus();
+        this.registers.P.interrupt = true;
+        this.registers.PC = this.read(0xFFFE, "Word");
+    }
+
     run(): number {
         if (this.interrupts.isNmiAssert()) {
             this.processNmi();
+        }
+
+        if (this.interrupts.isIrqAssert()) {
+            // this.processIrq();
         }
 
         // console.log("PC: " + this.registers.PC.toString(16));
         const opecode = this.fetch(this.registers.PC);
 
         if (!opecode) {
-            throw `${this.registers.PC.toString(16)}: opecode is not defiend`;
+            throw `${this.registers.PC.toString(16)}: opecode is not defiend. ` + this.prev.toString(16) + "prev2: " + this.prev2.toString(16);
         }
 
         // console.log(instructions[opecode.toString(16).toUpperCase()]);
         if (!instructions[opecode.toString(16).toUpperCase()]) {
-            throw "opecode: " + opecode.toString(16);
+            throw "opecode: " + opecode.toString(16) + " :prev: " + this.prev + "prev2: " + this.prev2;
         }
         const { fullName, baseName, mode, cycle } = instructions[opecode.toString(16).toUpperCase()];
         const addressOrData = this.getAddressOrData(mode);
 
         // console.log("addressOrdata:" + addressOrData.toString(16));
+        this.prev = opecode;
+        this.prev2 = this.prev;
 
         this.execInstruction(baseName, mode, addressOrData);
 

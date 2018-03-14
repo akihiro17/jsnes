@@ -3,6 +3,7 @@
 import Rom from "../rom/rom";
 import Ram from "../ram/ram";
 import Ppu from "../ppu/ppu";
+import Apu from "../apu/apu";
 import KeyPad from "../key-pad/key-pad";
 import Dma from "../dma/dma";
 import type { Byte, Word } from "../types/common";
@@ -11,15 +12,17 @@ export default class CpuBus {
     programROM: Rom;
     ram: Ram;
     ppu: Ppu;
-    keypad: KeyPad
-    dma: Dma
+    keypad: KeyPad;
+    dma: Dma;
+    apu: Apu;
 
-    constructor(programROM: Rom, ram: Ram, ppu: Ppu, keypad: KeyPad, dma: Dma) {
+    constructor(programROM: Rom, ram: Ram, ppu: Ppu, keypad: KeyPad, dma: Dma, apu: Apu) {
         this.programROM = programROM;
         this.ram = ram;
         this.ppu = ppu;
         this.keypad = keypad;
         this.dma = dma;
+        this.apu = apu;
     }
 
     readByCpu(address: Word): Byte {
@@ -32,6 +35,9 @@ export default class CpuBus {
             // 0x2000～0x2007 PPU レジスタ
             // 0x2008～0x3FFF PPUレジスタのミラー
             return this.ppu.read((address - 0x2000) % 8);
+        }
+        else if (address === 0x4015) {
+            return this.apu.read(address - 0x4000);
         }
         else if (address === 0x4016) {
             return +this.keypad.read(); // convert boolean into nubmer
@@ -50,7 +56,7 @@ export default class CpuBus {
         }
 
         // Cannot expect `Byte` as the return type of function because number [1] is incompatible with implicitly-returned
-        throw "unexpected read address: " + address.toString(16);
+        throw "cpu-bus: unexpected read address: " + address.toString(16);
     }
 
     writeByCpu(address: Word, data: Byte) {
@@ -71,7 +77,11 @@ export default class CpuBus {
 
             // keypad
             this.keypad.write(data);
-        } else {
+        } else if (address >= 0x4000 && address <= 0x401F) {
+            console.log("apu write:" + address.toString(16));
+            this.apu.write(address - 0x4000, data);
+        }
+        else {
             throw "unexpected write address: " + address.toString(16);
         }
     }

@@ -1,6 +1,6 @@
 /** @flow*/
 
-import wave from './wave';
+import wave from './waves';
 import type { Byte } from "../types/common";
 
 export default class Oscillator {
@@ -14,9 +14,10 @@ export default class Oscillator {
 
     constructor() {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
-        this.context = AudioContext;
+        this.context = new AudioContext();
         this.oscillator = this.createOscillator();
 
+        // periodicwave生成方法?
         this.waves = {
             '0.125': this.context.createPeriodicWave(wave['0.125'].real, wave['0.125'].imag),
             '0.25': this.context.createPeriodicWave(wave['0.25'].real, wave['0.25'].imag),
@@ -36,6 +37,7 @@ export default class Oscillator {
     }
 
     start() {
+        console.log('start');
         if (this.playing) {
             this.stop();
         }

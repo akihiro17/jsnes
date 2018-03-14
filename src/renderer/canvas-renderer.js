@@ -66,6 +66,12 @@ export default class CanvasRenderer {
                 const colorId = palette[paletteIndex];
                 const color = colors[colorId];
 
+                if (color === undefined) {
+                    console.log(`spriteId: ${sprite[i][j]}`)
+                    console.log(`paletteId: ${paletteId}`)
+                    console.log(`color id: ${colorId}`);
+                }
+
                 const x = tileX + j - offsetX;
                 const y = (tileY + i) - offsetY;
 

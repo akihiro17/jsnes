@@ -2,7 +2,8 @@
 
 import Nes from "./src/nes/nes";
 
-fetch('./sample1.nes')
+fetch('./nestest.nes')
+// fetch('./all/giko/giko012.nes')
     .then((res) => res.arrayBuffer())
     .then((nesFile: ArrayBuffer) => {
         const nes = new Nes();

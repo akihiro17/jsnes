@@ -90,7 +90,7 @@ export default class Ppu {
 
                 // vBlank割り込み
                 if (this.vBlankIrqEnabled()) {
-                    console.log("vBlank interrupt");
+                    // console.log("vBlank interrupt");
                     this.interrupts.assertNmi();
                 }
             }
@@ -280,7 +280,7 @@ export default class Ppu {
             return;
         }
         if (address === 0x0005) {
-            console.log(`scroll: ${data}`);
+            // console.log(`scroll: ${data}`);
             this.writeScrollData(data);
             return;
         }
@@ -339,6 +339,9 @@ export default class Ppu {
             // pallete
             if (this.vramAddress >= 0x3F00 && this.vramAddress < 0x4000) {
                 // console.log("palette write");
+                if (data > 64) {
+                    throw "palette";
+                }
                 this.palette[this.vramAddress - 0x3F00] = data;
             } else {
 

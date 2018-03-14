@@ -9,12 +9,14 @@ import Cpu from "../cpu/cpu";
 import Ppu from "../ppu/ppu";
 import KeyPad from "../key-pad/key-pad";
 import Dma from "../dma/dma";
+import Apu from "../apu/apu";
 import Interrupts from "../interrupts/interrupts";
 import CanvasRenderer from "../renderer/canvas-renderer";
 
 export default class Nes {
     cpu: Cpu;
     ppu: Ppu;
+    apu: Apu;
     renderer: CanvasRenderer;
     cpubus: CpuBus;
     ppubus: PpuBus;
@@ -54,7 +56,10 @@ export default class Nes {
         //dma
         this.dma = new Dma(this.ppu, ram);
 
-        this.cpubus = new CpuBus(program, ram, this.ppu, this.keypad, this.dma);
+        // apu
+        this.apu = new Apu(this.interrupts);
+
+        this.cpubus = new CpuBus(program, ram, this.ppu, this.keypad, this.dma, this.apu);
         this.cpu = new Cpu(this.cpubus, this.interrupts);
 
         this.cpu.reset();
@@ -75,6 +80,8 @@ export default class Nes {
 
             cycle += this.cpu.run();
             const renderingData = this.ppu.run(cycle * 3);
+
+            this.apu.run(cycle);
 
             if (renderingData) {
                 this.renderer.render(renderingData);

@@ -2,9 +2,11 @@
 
 export default class Interrupts {
     nmi: boolean;
+    irq: boolean;
 
     constructor() {
         this.nmi = false;
+        this.irq = false;
     }
 
     isNmiAssert(): boolean {
@@ -17,5 +19,17 @@ export default class Interrupts {
 
     deassertNmi() {
         this.nmi = false;
+    }
+
+    isIrqAssert(): boolean {
+        return this.irq;
+    }
+
+    assertIrq() {
+        this.irq = true;
+    }
+
+    deassertIrq() {
+        this.irq = false;
     }
 }

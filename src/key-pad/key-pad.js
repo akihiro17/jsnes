@@ -47,6 +47,10 @@ export default class KeyPad {
 
     getKeyIndex(keycode: string): number {
         switch (keycode) {
+            case "x": return 0; // X  A
+            case "z": return 1; // Z  B
+            case "a": return 2; // A  SELECT
+            case "s": return 3; // S  START
             case "ArrowUp": return 4;
             case "ArrowDown": return 5;
             case "ArrowLeft": return 6;

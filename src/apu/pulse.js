@@ -35,11 +35,12 @@ export default class Pulse {
     isSweepEnabled: boolean;
     sweepmode: boolean; // スイープ方向
     sweepUnitCounter: number;
-    sweepUnitDiviser: number; // スイープ周期
+    sweepUnitDivider: number; // スイープ周期
     sweepShiftAmount: number; // スイープ量
     dividerForFrequency: number; // チャンネル周期
     frequency: number;
     oscillator: Oscillator;
+    flag: boolean;
 
     constructor() {
         // ?
@@ -49,8 +50,13 @@ export default class Pulse {
 
         this.sweepUnitCounter = 0;
 
+        this.lengthCounter = 0;
+        this.isLengthCounterEnabled = false;
+
         this.oscillator = new Oscillator();
         this.oscillator.setVolume(1);
+
+        this.flag = false;
     }
 
     updateEnvelope() {
@@ -91,10 +97,16 @@ export default class Pulse {
           - スイープ量が0ではない
           - チャンネルの長さカウンタがゼロではない
           以上の3つの条件がすべてそろえばチャンネルの周期を新しい値で更新します。
-         */
+        */
+
+        if (this.flag === true && this.sweepUnitDivider === undefined) {
+            throw "sweepUnitdider is undefined";
+        } else if (this.sweepUnitDivider === undefined) {
+            return;
+        }
 
         this.sweepUnitCounter++;
-        if (!(this.sweepUnitCounter % this.sweepUnitDiviser)) {
+        if (!(this.sweepUnitCounter % this.sweepUnitDivider)) {
             if (this.isSweepEnabled) {
                 /*
                   ビット3（スイープ方向）
@@ -130,6 +142,7 @@ export default class Pulse {
         */
 
         if (address === 0x00) {
+            console.log(`pulse 0x00: ${data.toString(2)}`);
             // コントロールレジスタ
             /*
               $4000/$4004   ddld nnnn
@@ -138,14 +151,24 @@ export default class Pulse {
               4   d   エンベロープ無効
               3-0 n   ボリューム/エンベロープ周期
             */
+
+            /*
+              lda #%10111111; Duty比・長さ無効・減衰無効・減衰率
+	      sta $4000	; 矩形波チャンネル１制御レジスタ１
+            */
             this.envelopeEnable = !((data & 0x10) !== 0);
-            this.envelopeLoopEnable = !((data & 0x20) !== 0);
+            this.envelopeLoopEnable = ((data & 0x20) !== 0);
             // ? +1
             this.envelopeRate = data & 0xF + 1;
             // If the envelope is not looped, the length counter must be enabled
             this.isLengthCounterEnabled = !(data & 0x20);
+
+            const duty = (data & 0xC0) >> 6;
+            this.oscillator.setVolume(this.volume);
+            this.oscillator.setPulseWidth(this.getPulseWidth(duty));
         }
         else if (address === 0x01) {
+            console.log("pulse 0x01");
             /*
               $4001/$4005   eppp nsss
               7   e   スイープ有効
@@ -153,17 +176,33 @@ export default class Pulse {
               3   n   スイープ方向
               2-0 s   スイープ量
             */
+            /*
+              lda #%10101011; スイープ有効・変化率・方向・変化量
+	      sta $4001	; 矩形波チャンネル１制御レジスタ２
+            */
 
             // スイープ有効
             this.isSweepEnabled = !!(data & 0x80);
             // スイープ周期
-            this.sweepUnitDiviser = (data >> 0x04) & 0x07;
+            this.sweepUnitDivider = ((data >> 4) & 0x07) + 1;
             // スイープ方向
             this.sweepmode = !!(data & 0x08);
             // スイープ量
             this.sweepShiftAmount = data & 0x07;
+
+            console.log('~~~~~~')
+            console.log(this.sweepUnitDivider);
+
+            this.flag = true;
+            console.log(this.flag);
+            console.log('~~~~~~')
+
+            if (this.sweepUnitDivider === undefined) {
+                throw "sweepUnitDivider is undefined";
+            }
         }
         else if (address === 0x02) {
+            console.log("pulse 0x02");
             // $4002/$4006   llll llll
             // 7-0 l   チャンネル周期下位
             // 全部で12bitある
@@ -172,6 +211,7 @@ export default class Pulse {
 
         }
         else if (address === 0x03) {
+            console.log("pulse 0x03");
             /*
               $4003/$4007   cccc chhh
               7-3 c   長さカウンタインデクス
@@ -193,6 +233,9 @@ export default class Pulse {
             this.sweepUnitCounter = 0;
             this.envelopeGeneratorCounter = this.envelopeRate;
             this.envelopeVolume = 0x0F;
+
+            this.oscillator.start();
+            this.oscillator.setFrequency(this.frequency);
         }
     }
 
@@ -204,5 +247,15 @@ export default class Pulse {
         // 0 ~ 1の範囲にする
         // envelopeVolumeもenvelopeRateもとちらも4ビット
         return (vol * global_gain) / 0x0F;
+    }
+
+    getPulseWidth(duty: number): number {
+        switch (duty) {
+            case 0x00: return 0.125;
+            case 0x01: return 0.25;
+            case 0x02: return 0.5;
+            case 0x03: return 0.75;
+            default: return 0;
+        }
     }
 }

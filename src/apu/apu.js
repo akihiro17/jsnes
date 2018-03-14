@@ -1,6 +1,7 @@
 /** @flow*/
 
 import Pulse from "./pulse";
+import Interrupts from "../interrupts/interrupts";
 import type { Byte, Word } from "../types/common";
 
 // 分周器は、入力される約1.789MHzを7457分周することで240Hzのクロックレートを生成し、 これによってシーケンサを励起します
@@ -13,15 +14,17 @@ export default class Apu {
     enableIrq: boolean;
     pulses: Pulse[];
     registers: Uint8Array;
+    interrupts: Interrupts
 
-    constructor() {
+    constructor(interrupts: Interrupts) {
         this.cycle = 0;
         this.step = 0;
-        this.sequencerMode = 0;
         this.enableIrq = false;
-        this.pulses = [new Pulse(), new Pulse()];
+        this.pulses = [new Pulse()];
+        // this.pulses = [];
         // 0x4000 ~ 0x4017
         this.registers = new Uint8Array(0x18);
+        this.interrupts = interrupts;
     }
 
     run(cycle: number) {
@@ -32,11 +35,11 @@ export default class Apu {
 
             // シーケンサモードがクリアされているなら4ステップ、
             // セットされているなら5ステップのシーケンスを選択します
-            if (this.sequencerMode) {
-                this.updateBySequenceMode1()
+            if (this.sequencerMode === 1) {
+                this.updateBySequenceMode1();
             }
             else {
-                this.updateBySequenceMode0()
+                this.updateBySequenceMode0();
             }
         }
     }
@@ -66,7 +69,7 @@ export default class Apu {
         // 5ステップ目
         if (this.step === 4) {
             if (this.enableIrq) {
-                // TODO: assertIra
+                this.interrupts.assertIrq();
             }
             this.step = 0;
         }
@@ -106,16 +109,23 @@ export default class Apu {
         this.pulses.forEach((s: Pulse) => s.updateSweepAndLengthCounter());
     }
 
-    read(): Byte {
-        return 0x00;
+    read(address: Byte): Byte {
+        if (address === 0x15) {
+            // Reading this register clears the frame interrupt flag
+            this.interrupts.deassertIrq();
+        }
+
+        return 0;
     }
 
     write(address: Byte, data: Byte) {
+        console.log(`apu write ${address}`);
         if (address <= 0x03) {
             this.pulses[0].write(address, data);
         }
         else if (address <= 0x07) {
-            this.pulses[1].write(address, data);
+            // this.pulses[1] = new Pulse();
+            // this.pulses[1].write(address - 0x04, data);
         }
         else if (address === 0x17) {
             // frame counter
