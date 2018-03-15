@@ -1,6 +1,7 @@
 /** @flow*/
 
 import wave from "./waves";
+import type { Byte } from "../types/common";
 
 export default class Oscillator {
     context: AudioContext;
@@ -22,12 +23,14 @@ export default class Oscillator {
         }
 
         // periodicwave生成方法?
+        /* eslint-disable */
         this.waves = {
-            0.125: this.context.createPeriodicWave(wave["0.125"].real, wave["0.125"].imag),
-            0.25: this.context.createPeriodicWave(wave["0.25"].real, wave["0.25"].imag),
-            0.5: this.context.createPeriodicWave(wave["0.5"].real, wave["0.5"].imag),
-            0.75: this.context.createPeriodicWave(wave["0.75"].real, wave["0.75"].imag)
+            "0.125": this.context.createPeriodicWave(wave["0.125"].real, wave["0.125"].imag),
+            "0.25": this.context.createPeriodicWave(wave["0.25"].real, wave["0.25"].imag),
+            "0.5": this.context.createPeriodicWave(wave["0.5"].real, wave["0.5"].imag),
+            "0.75": this.context.createPeriodicWave(wave["0.75"].real, wave["0.75"].imag)
         };
+        /* eslint-enable */
 
         this.setPulseWidth(0.5);
         this.playing = false;
@@ -57,7 +60,7 @@ export default class Oscillator {
     }
 
     start() {
-        console.log("start");
+        // console.log("start");
         if (this.playing) {
             this.stop();
         }

@@ -2,6 +2,7 @@
 
 import Pulse from "./pulse";
 import Triangle from "./triangle";
+import Noise from "./noise";
 import Interrupts from "../interrupts/interrupts";
 import type { Byte } from "../types/common";
 
@@ -15,6 +16,7 @@ export default class Apu {
     enableIrq: boolean;
     pulses: Pulse[];
     triangle: Triangle;
+    noise: Noise;
     registers: Uint8Array;
     interrupts: Interrupts
 
@@ -24,6 +26,7 @@ export default class Apu {
         this.enableIrq = false;
         this.pulses = [new Pulse(), new Pulse()];
         this.triangle = new Triangle();
+        this.noise = new Noise();
 
         // this.pulses = [];
         // 0x4000 ~ 0x4017
@@ -135,7 +138,10 @@ export default class Apu {
             this.pulses[1].write(address - 0x04, data);
         } else if (address <= 0x0B) {
             this.triangle.write(address - 0x08, data);
-        } else if (address === 0x17) {
+        } else if (address <= 0x0F) {
+            this.noise.write(address - 0x0F, data);
+        }
+        else if (address === 0x17) {
 
             // frame counter
             // $4017 MI-- ---- Mode (M, 0 = 4-step, 1 = 5-step), IRQ inhibit flag (I)
