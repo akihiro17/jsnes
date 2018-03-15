@@ -22,6 +22,7 @@ export default class Dma {
     }
 
     write(data: Byte) {
+
         // $4014レジスタに転送するRAMのアドレスの百の位を書き込みます
         // 3(11) => 300(1100000000)
         this.ramAddress = data << 8;
@@ -29,8 +30,9 @@ export default class Dma {
     }
 
     run() {
+
         // スプライトデータは4バイト(y, index, attribute, x)l
-        for(let i = 0; i < 0x100; i += 1) {
+        for (let i = 0; i < 0x100; i += 1) {
             this.ppu.transferSprite(i, this.ram.read(this.ramAddress + i));
         }
         this.isDmaProcessing = false;

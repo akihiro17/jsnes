@@ -90,6 +90,7 @@ export default class Ppu {
 
                 // vBlank割り込み
                 if (this.vBlankIrqEnabled()) {
+
                     // console.log("vBlank interrupt");
                     this.interrupts.assertNmi();
                 }
@@ -207,10 +208,14 @@ export default class Ppu {
 
         for (let i = 0; i < SPRITES_NUM; i = i + 4) {
             const address = i + offset;
+
             // INFO: Offset sprite Y position, because First and last 8line is not rendered.
             // これがないとギコ猫が(0, 0)と(20, 50)のポジションに出てしまう
             const y = this.spriteRam.read(i) - 8;
-            if (y < 0) return;
+
+            if (y < 0) {
+                return;
+            }
             const spriteId = this.spriteRam.read(i + 1);
             const attribute = this.spriteRam.read(i + 2);
             const x = this.spriteRam.read(i + 3);
@@ -226,6 +231,7 @@ export default class Ppu {
     }
 
     scrollTileX(): Byte {
+
         /*
           Name table id and address
           +------------+------------+
@@ -238,11 +244,11 @@ export default class Ppu {
           |            |            |
           +------------+------------+
         */
-        return ~~(this.scrollX + ((this.nameTableId() % 2 ) * 256) / 8);
+        return ~~(this.scrollX + ((this.nameTableId() % 2) * 256) / 8);
     }
 
     scrollTileY(): Byte {
-        return ~~(this.scrollY + ((this.nameTableId() % 2 ) * 240) / 8);
+        return ~~(this.scrollY + ((this.nameTableId() % 2) * 240) / 8);
     }
 
     // 1ブロックは、2x2タイル
@@ -274,12 +280,14 @@ export default class Ppu {
             return;
         }
         if (address === 0x0004) {
+
             // console.log("sprite vram address: " + this.spriteAddress + " data: " + data);
             this.spriteRam.write(this.spriteAddress, data);
             this.spriteAddress++;
             return;
         }
         if (address === 0x0005) {
+
             // console.log(`scroll: ${data}`);
             this.writeScrollData(data);
             return;
@@ -300,27 +308,28 @@ export default class Ppu {
         }
 
         // PPUレジスタ
-        if (0x0000 === address || address === 0x0001) {
+        if (address === 0x0000 || address === 0x0001) {
+
             // console.log("ppu register: " + data.toString(2) + " to " + address);
             this.registers[address] = data;
             return;
         }
 
-        throw "unexpected write address(ppu): " + address.toString(16);
+        throw `unexpected write address(ppu): ${address.toString(16)}`;
     }
 
     read(address: Word): Byte {
         if (address === 0x0002) {
             this.isHorizontalScroll = true;
             const data = this.registers[0x02];
+
             this.clearVblank();
             return data;
-        }
-        else if (address === 0x0004) {
+        } else if (address === 0x0004) {
             return this.spriteRam.read(this.spriteAddress);
-        } else {
-            throw "unexpected read address: " + address.toString(16);
         }
+        throw `unexpected read address: ${address.toString(16)}`;
+
     }
 
     writeVramAddress(data: Byte): void {
@@ -338,6 +347,7 @@ export default class Ppu {
 
             // pallete
             if (this.vramAddress >= 0x3F00 && this.vramAddress < 0x4000) {
+
                 // console.log("palette write");
                 if (data > 64) {
                     throw `address: ${this.vramAddress - 0x3F00}, data: ${data}`;
@@ -350,7 +360,7 @@ export default class Ppu {
                 this.writeVram(this.calculateAddress(), data);
             }
         } else {
-            console.log("write character ram:: " + this.vramAddress);
+            console.log(`write character ram:: ${this.vramAddress}`);
             this.bus.writeByPpu(this.vramAddress, data);
         }
         this.vramAddress += 0x01;
@@ -388,6 +398,7 @@ export default class Ppu {
     }
 
     backgroundTableOffset(): Word {
+
         // コントロールレジスタ1
         // bit 用途
         // --------------------------------------------------------
@@ -415,6 +426,7 @@ export default class Ppu {
 
     transferSprite(index: Byte, data: Byte) {
         const address = this.spriteAddress + index;
+
         this.spriteRam.write(address, data);
     }
 }

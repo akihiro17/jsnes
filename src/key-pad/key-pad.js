@@ -14,11 +14,11 @@ export default class KeyPad {
         this.keyBuffer = [];
         this.keyRegistors = [];
 
-        document.addEventListener('keydown', (event: KeyboardEvent) => {
+        document.addEventListener("keydown", (event: KeyboardEvent) => {
             this.onKeyDown(this.getKeyIndex(event.key));
         });
 
-        document.addEventListener('keyup', (event: KeyboardEvent) => {
+        document.addEventListener("keyup", (event: KeyboardEvent) => {
             this.onKeyUp(this.getKeyIndex(event.key));
         });
     }

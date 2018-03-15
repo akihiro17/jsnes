@@ -1,6 +1,6 @@
 /** @flow*/
 
-import wave from './waves';
+import wave from "./waves";
 import type { Byte } from "../types/common";
 
 export default class Oscillator {
@@ -14,20 +14,20 @@ export default class Oscillator {
 
     constructor(type?: string) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
+
         this.context = new AudioContext();
-        if (type === 'triangle') {
+        if (type === "triangle") {
             this.oscillator = this.createTriangleOscillator();
-        }
-        else {
+        } else {
             this.oscillator = this.createOscillator();
         }
 
         // periodicwave生成方法?
         this.waves = {
-            '0.125': this.context.createPeriodicWave(wave['0.125'].real, wave['0.125'].imag),
-            '0.25': this.context.createPeriodicWave(wave['0.25'].real, wave['0.25'].imag),
-            '0.5': this.context.createPeriodicWave(wave['0.5'].real, wave['0.5'].imag),
-            '0.75': this.context.createPeriodicWave(wave['0.75'].real, wave['0.75'].imag)
+            0.125: this.context.createPeriodicWave(wave["0.125"].real, wave["0.125"].imag),
+            0.25: this.context.createPeriodicWave(wave["0.25"].real, wave["0.25"].imag),
+            0.5: this.context.createPeriodicWave(wave["0.5"].real, wave["0.5"].imag),
+            0.75: this.context.createPeriodicWave(wave["0.75"].real, wave["0.75"].imag)
         };
 
         this.setPulseWidth(0.5);
@@ -36,6 +36,7 @@ export default class Oscillator {
 
     createOscillator(): OscillatorNode {
         const oscillator = this.context.createOscillator();
+
         this.gain = this.context.createGain();
         this.gain.gain.value = 0.1;
         oscillator.connect(this.gain);
@@ -46,6 +47,7 @@ export default class Oscillator {
 
     createTriangleOscillator(): OscillatorNode {
         const oscillator = this.context.createOscillator();
+
         oscillator.type = "triangle";
         this.gain = this.context.createGain();
         this.gain.gain.value = 0.01;
@@ -56,7 +58,7 @@ export default class Oscillator {
     }
 
     start() {
-        console.log('start');
+        console.log("start");
         if (this.playing) {
             this.stop();
         }

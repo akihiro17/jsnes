@@ -30,33 +30,30 @@ export default class CpuBus {
         // console.log("readByCpu: " + address.toString(16));
         if (address < 0x0800) {
             return this.ram.read(address);
-        }
-        else if (address < 0x4000) {
+        } else if (address < 0x4000) {
+
             // 0x2000～0x2007 PPU レジスタ
             // 0x2008～0x3FFF PPUレジスタのミラー
             return this.ppu.read((address - 0x2000) % 8);
-        }
-        else if (address === 0x4015) {
+        } else if (address === 0x4015) {
             return this.apu.read(address - 0x4000);
-        }
-        else if (address === 0x4016) {
+        } else if (address === 0x4016) {
             return +this.keypad.read(); // convert boolean into nubmer
-        }
-        else if (address >= 0xC000) {
+        } else if (address >= 0xC000) {
 
             // Mirror, if prom block number equals 1
             if (this.programROM.size() <= 0x4000) {
                 return this.programROM.read(address - 0xC000);
             }
+
             // ブロックが2つの場合はミラーじゃない
             return this.programROM.read(address - 0x8000);
-        }
-        else if (address >= 0x8000) {
+        } else if (address >= 0x8000) {
             return this.programROM.read(address - 0x8000);
         }
 
         // Cannot expect `Byte` as the return type of function because number [1] is incompatible with implicitly-returned
-        throw "cpu-bus: unexpected read address: " + address.toString(16);
+        throw `cpu-bus: unexpected read address: ${address.toString(16)}`;
     }
 
     writeByCpu(address: Word, data: Byte) {
@@ -71,6 +68,7 @@ export default class CpuBus {
             // console.log("ppu write:" + address.toString(16));
             this.ppu.write(address - 0x2000, data);
         } else if (address === 0x4014) {
+
             // dma
             this.dma.write(data);
         } else if (address === 0x4016) {
@@ -78,11 +76,11 @@ export default class CpuBus {
             // keypad
             this.keypad.write(data);
         } else if (address >= 0x4000 && address <= 0x401F) {
+
             // console.log("apu write:" + address.toString(16));
             this.apu.write(address - 0x4000, data);
-        }
-        else {
-            throw "unexpected write address: " + address.toString(16);
+        } else {
+            throw `unexpected write address: ${address.toString(16)}`;
         }
     }
 }

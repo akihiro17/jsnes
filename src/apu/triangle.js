@@ -10,7 +10,7 @@ const counterTable = [
     0x0A, 0xFE, 0x14, 0x02, 0x28, 0x04, 0x50, 0x06,
     0xA0, 0x08, 0x3C, 0x0A, 0x0E, 0x0C, 0x1A, 0x0E,
     0x0C, 0x10, 0x18, 0x12, 0x30, 0x14, 0x60, 0x16,
-    0xC0, 0x18, 0x48, 0x1A, 0x10, 0x1C, 0x20, 0x1E,
+    0xC0, 0x18, 0x48, 0x1A, 0x10, 0x1C, 0x20, 0x1E
 ];
 
 export default class Triangle {
@@ -18,13 +18,13 @@ export default class Triangle {
     lengthCounter: number; // 長さカウンタ
     linearCounter: number; // 線形カウンタ
     frequency: number;
-    dividerForFrequency: number; //チャンネル周期
+    dividerForFrequency: number; // チャンネル周期
     oscillator: Oscillator;
 
     constructor() {
         this.isLengthCounterEnable = false;
         this.lengthCounter = 0;
-        this.oscillator = new Oscillator('triangle');
+        this.oscillator = new Oscillator("triangle");
 
         this.oscillator.setVolume(this.volume);
     }
@@ -49,8 +49,9 @@ export default class Triangle {
     }
 
     write(address: Byte, data: Byte) {
+
         // lda #%1111111; カウンタ使用・長さ
-	// sta $4008; 三角波チャンネル制御レジスタ
+        // sta $4008; 三角波チャンネル制御レジスタ
         /*
           $4008  clll llll
           7   c   長さカウンタ無効フラグ
@@ -67,12 +68,10 @@ export default class Triangle {
             this.isLengthCounterEnable = !(data & 0x80);
             this.linearCounter = data & 0x7F;
             this.oscillator.setVolume(this.volume);
-        }
-        else if (address === 0x02) {
+        } else if (address === 0x02) {
             this.dividerForFrequency &= 0x700;
             this.dividerForFrequency |= data;
-        }
-        else if (address === 0x03) {
+        } else if (address === 0x03) {
             this.dividerForFrequency &= 0xFF;
             this.dividerForFrequency |= (data & 0x07) << 8;
             if (this.isLengthCounterEnable) {

@@ -24,6 +24,7 @@ export default class Apu {
         this.enableIrq = false;
         this.pulses = [new Pulse(), new Pulse()];
         this.triangle = new Triangle();
+
         // this.pulses = [];
         // 0x4000 ~ 0x4017
         this.registers = new Uint8Array(0x18);
@@ -40,8 +41,7 @@ export default class Apu {
             // セットされているなら5ステップのシーケンスを選択します
             if (this.sequencerMode === 1) {
                 this.updateBySequenceMode1();
-            }
-            else {
+            } else {
                 this.updateBySequenceMode0();
             }
         }
@@ -54,6 +54,7 @@ export default class Apu {
      */
 
     updateBySequenceMode0() {
+
         /*
         モード0: 4ステップ 有効レート(おおよそ)
         ---------------------------------------
@@ -69,6 +70,7 @@ export default class Apu {
         }
 
         this.step++;
+
         // 5ステップ目
         if (this.step === 4) {
             if (this.enableIrq) {
@@ -79,6 +81,7 @@ export default class Apu {
     }
 
     updateBySequenceMode1() {
+
         /*
         モード1: 5ステップ 有効レート(おおよそ)
         ---------------------------------------
@@ -104,7 +107,7 @@ export default class Apu {
 
     // volume
     updateEnvelope() {
-      this.pulses.forEach((s: Pulse) => s.updateEnvelope());
+        this.pulses.forEach((s: Pulse) => s.updateEnvelope());
     }
 
     // frequency
@@ -115,6 +118,7 @@ export default class Apu {
 
     read(address: Byte): Byte {
         if (address === 0x15) {
+
             // Reading this register clears the frame interrupt flag
             this.interrupts.deassertIrq();
         }
@@ -123,17 +127,16 @@ export default class Apu {
     }
 
     write(address: Byte, data: Byte) {
+
         // console.log(`apu write ${address}`);
         if (address <= 0x03) {
             this.pulses[0].write(address, data);
-        }
-        else if (address <= 0x07) {
+        } else if (address <= 0x07) {
             this.pulses[1].write(address - 0x04, data);
-        }
-        else if (address <= 0x0B) {
+        } else if (address <= 0x0B) {
             this.triangle.write(address - 0x08, data);
-        }
-        else if (address === 0x17) {
+        } else if (address === 0x17) {
+
             // frame counter
             // $4017	MI-- ----	Mode (M, 0 = 4-step, 1 = 5-step), IRQ inhibit flag (I)
             this.sequencerMode = data & 0x80;

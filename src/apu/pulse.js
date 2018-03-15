@@ -7,10 +7,10 @@ const global_gain = 0.1;
 const CPU_CLOCK = 1789772.5;
 
 const counterTable = [
-  0x0A, 0xFE, 0x14, 0x02, 0x28, 0x04, 0x50, 0x06,
-  0xA0, 0x08, 0x3C, 0x0A, 0x0E, 0x0C, 0x1A, 0x0E,
-  0x0C, 0x10, 0x18, 0x12, 0x30, 0x14, 0x60, 0x16,
-  0xC0, 0x18, 0x48, 0x1A, 0x10, 0x1C, 0x20, 0x1E,
+    0x0A, 0xFE, 0x14, 0x02, 0x28, 0x04, 0x50, 0x06,
+    0xA0, 0x08, 0x3C, 0x0A, 0x0E, 0x0C, 0x1A, 0x0E,
+    0x0C, 0x10, 0x18, 0x12, 0x30, 0x14, 0x60, 0x16,
+    0xC0, 0x18, 0x48, 0x1A, 0x10, 0x1C, 0x20, 0x1E
 ];
 
 /*
@@ -43,6 +43,7 @@ export default class Pulse {
     flag: boolean;
 
     constructor() {
+
         // ?
         this.envelopeGeneratorCounter = 0;
         this.envelopeRate = 0x0F;
@@ -60,6 +61,7 @@ export default class Pulse {
     }
 
     updateEnvelope() {
+
         /*
           最後のクロック以降チャンネルの4番目のレジスタへの書き込みがあった場合、
           カウンタへ$Fをセットし、分周器へエンベロープ周期をセットします。
@@ -72,8 +74,7 @@ export default class Pulse {
             // カウンタがゼロで、ループフラグがセットされているならカウンタへ$Fをセットします
             if (this.envelopeVolume > 0) {
                 this.envelopeVolume--;
-            }
-            else {
+            } else {
                 this.envelopeVolume = this.envelopeLoopEnable ? 0x0F : 0x00;
             }
         }
@@ -82,6 +83,7 @@ export default class Pulse {
     }
 
     updateSweepAndLengthCounter() {
+
         // 停止フラグがクリアかつカウンタがゼロでないなら、カウンタをデクリメントします
         if (this.isLengthCounterEnabled && this.lengthCounter > 0) {
             this.lengthCounter--;
@@ -108,6 +110,7 @@ export default class Pulse {
         this.sweepUnitCounter++;
         if (!(this.sweepUnitCounter % this.sweepUnitDivider)) {
             if (this.isSweepEnabled) {
+
                 /*
                   ビット3（スイープ方向）
                   ----------------------
@@ -115,15 +118,16 @@ export default class Pulse {
                   1  しり上がりモード    新しい周期 = 周期 - (周期 >> N)
                 */
                 const sign = this.sweepmode ? 1 : -1;
+
                 this.frequency = this.frequency + sign * (this.frequency >> this.sweepShiftAmount);
+
                 // もしチャンネルの周期が8未満か、$7FFより大きくなったなら、スイープを停止し、 チャンネルを無音化します。
                 // これはスイープユニットが無効であっても働きます
                 // なぜ2倍?
                 if (this.frequency > 4095) {
                     this.frequency = 4095;
                     this.oscillator.stop();
-                }
-                else if (this.frequency < 16) {
+                } else if (this.frequency < 16) {
                     this.frequency = 16;
                     this.oscillator.stop();
                 }
@@ -134,6 +138,7 @@ export default class Pulse {
     }
 
     write(address: Byte, data: Byte) {
+
         /*
           $4000 矩形波1コントロール1
           $4001 矩形波1コントロール2
@@ -143,6 +148,7 @@ export default class Pulse {
 
         if (address === 0x00) {
             console.log(`pulse 0x00: ${data.toString(2)}`);
+
             // コントロールレジスタ
             /*
               $4000/$4004   ddld nnnn
@@ -158,17 +164,20 @@ export default class Pulse {
             */
             this.envelopeEnable = !((data & 0x10) !== 0);
             this.envelopeLoopEnable = ((data & 0x20) !== 0);
+
             // ? +1
             this.envelopeRate = data & 0xF + 1;
+
             // If the envelope is not looped, the length counter must be enabled
             this.isLengthCounterEnabled = !(data & 0x20);
 
             const duty = (data & 0xC0) >> 6;
+
             this.oscillator.setVolume(this.volume);
             this.oscillator.setPulseWidth(this.getPulseWidth(duty));
-        }
-        else if (address === 0x01) {
+        } else if (address === 0x01) {
             console.log("pulse 0x01");
+
             /*
               $4001/$4005   eppp nsss
               7   e   スイープ有効
@@ -183,35 +192,38 @@ export default class Pulse {
 
             // スイープ有効
             this.isSweepEnabled = !!(data & 0x80);
+
             // スイープ周期
             this.sweepUnitDivider = ((data >> 4) & 0x07) + 1;
+
             // スイープ方向
             this.sweepmode = !!(data & 0x08);
+
             // スイープ量
             this.sweepShiftAmount = data & 0x07;
 
-            console.log('~~~~~~')
+            console.log("~~~~~~");
             console.log(this.sweepUnitDivider);
 
             this.flag = true;
             console.log(this.flag);
-            console.log('~~~~~~')
+            console.log("~~~~~~");
 
             if (this.sweepUnitDivider === undefined) {
                 throw "sweepUnitDivider is undefined";
             }
-        }
-        else if (address === 0x02) {
+        } else if (address === 0x02) {
             console.log("pulse 0x02");
+
             // $4002/$4006   llll llll
             // 7-0 l   チャンネル周期下位
             // 全部で12bitある
             this.dividerForFrequency &= 0x700;
             this.dividerForFrequency += data;
 
-        }
-        else if (address === 0x03) {
+        } else if (address === 0x03) {
             console.log("pulse 0x03");
+
             /*
               $4003/$4007   cccc chhh
               7-3 c   長さカウンタインデクス
@@ -242,7 +254,7 @@ export default class Pulse {
     // チャンネルのボリューム出力として、 エンベロープ無効フラグがセットされているなら、 エンベロープ周期のnをそのまま出力します。
     // クリアされているならカウンタの値を出力します。
     get volume(): number {
-        const vol = this.enableEnvelope ?  this.envelopeVolume : this.envelopeRate;
+        const vol = this.enableEnvelope ? this.envelopeVolume : this.envelopeRate;
 
         // 0 ~ 1の範囲にする
         // envelopeVolumeもenvelopeRateもとちらも4ビット

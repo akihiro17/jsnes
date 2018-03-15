@@ -1,6 +1,7 @@
 {
   "extends": [
-    "plugin:flowtype/recommended"
+    "plugin:flowtype/recommended",
+    "eslint"
   ],
   "plugins": [
     "flowtype"
