@@ -3,7 +3,7 @@
 import Pulse from "./pulse";
 import Triangle from "./triangle";
 import Interrupts from "../interrupts/interrupts";
-import type { Byte, Word } from "../types/common";
+import type { Byte } from "../types/common";
 
 // 分周器は、入力される約1.789MHzを7457分周することで240Hzのクロックレートを生成し、 これによってシーケンサを励起します
 const DIVIDE_COUNT_FOR_240HZ = 7457;
@@ -94,7 +94,7 @@ export default class Apu {
             this.updateSweepAndLengthCounter();
         }
 
-        if (this.step != 5) {
+        if (this.step !== 5) {
             this.updateEnvelope();
         }
 
@@ -138,7 +138,7 @@ export default class Apu {
         } else if (address === 0x17) {
 
             // frame counter
-            // $4017	MI-- ----	Mode (M, 0 = 4-step, 1 = 5-step), IRQ inhibit flag (I)
+            // $4017 MI-- ---- Mode (M, 0 = 4-step, 1 = 5-step), IRQ inhibit flag (I)
             this.sequencerMode = data & 0x80;
             this.enableIrq = !!(data & 0x40);
             this.registers[address] = data;

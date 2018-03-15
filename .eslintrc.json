@@ -5,5 +5,8 @@
   ],
   "plugins": [
     "flowtype"
-  ]
+  ],
+  "env": {
+    "browser": true
+  }
 }

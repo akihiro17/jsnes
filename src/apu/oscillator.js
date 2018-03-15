@@ -1,7 +1,6 @@
 /** @flow*/
 
 import wave from "./waves";
-import type { Byte } from "../types/common";
 
 export default class Oscillator {
     context: AudioContext;
