@@ -78,7 +78,7 @@ export default class CpuBus {
             // keypad
             this.keypad.write(data);
         } else if (address >= 0x4000 && address <= 0x401F) {
-            console.log("apu write:" + address.toString(16));
+            // console.log("apu write:" + address.toString(16));
             this.apu.write(address - 0x4000, data);
         }
         else {

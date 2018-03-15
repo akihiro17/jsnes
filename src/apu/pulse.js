@@ -3,7 +3,7 @@
 import Oscillator from "./oscillator";
 import type { Byte } from "../types/common";
 
-const global_gain = 0.01;
+const global_gain = 0.1;
 const CPU_CLOCK = 1789772.5;
 
 const counterTable = [
@@ -224,7 +224,7 @@ export default class Pulse {
             this.dividerForFrequency &= 0xFF;
             this.dividerForFrequency |= (data & 0x07) << 8;
             if (this.isLengthCounterEnabled) {
-                this.lengthCounter = counterTable[data & 0xF8];
+                this.lengthCounter = counterTable[(data & 0xF8) >> 3];
             }
 
             // f = CPU / (16 * (t + 1))

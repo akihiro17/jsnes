@@ -1,6 +1,7 @@
 /** @flow*/
 
 import Pulse from "./pulse";
+import Triangle from "./triangle";
 import Interrupts from "../interrupts/interrupts";
 import type { Byte, Word } from "../types/common";
 
@@ -13,6 +14,7 @@ export default class Apu {
     sequencerMode: number;
     enableIrq: boolean;
     pulses: Pulse[];
+    triangle: Triangle;
     registers: Uint8Array;
     interrupts: Interrupts
 
@@ -21,6 +23,7 @@ export default class Apu {
         this.step = 0;
         this.enableIrq = false;
         this.pulses = [new Pulse(), new Pulse()];
+        this.triangle = new Triangle();
         // this.pulses = [];
         // 0x4000 ~ 0x4017
         this.registers = new Uint8Array(0x18);
@@ -101,12 +104,13 @@ export default class Apu {
 
     // volume
     updateEnvelope() {
-        this.pulses.forEach((s: Pulse) => s.updateEnvelope());
+      this.pulses.forEach((s: Pulse) => s.updateEnvelope());
     }
 
     // frequency
     updateSweepAndLengthCounter() {
         this.pulses.forEach((s: Pulse) => s.updateSweepAndLengthCounter());
+        this.triangle.updateCounter();
     }
 
     read(address: Byte): Byte {
@@ -119,12 +123,15 @@ export default class Apu {
     }
 
     write(address: Byte, data: Byte) {
-        console.log(`apu write ${address}`);
+        // console.log(`apu write ${address}`);
         if (address <= 0x03) {
             this.pulses[0].write(address, data);
         }
         else if (address <= 0x07) {
             this.pulses[1].write(address - 0x04, data);
+        }
+        else if (address <= 0x0B) {
+            this.triangle.write(address - 0x08, data);
         }
         else if (address === 0x17) {
             // frame counter
