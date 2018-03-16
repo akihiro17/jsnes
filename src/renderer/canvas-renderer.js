@@ -48,7 +48,7 @@ export default class CanvasRenderer {
         const sprites = renderingData.sprites;
 
         if (sprites) {
-            // this.renderSprites(sprites, renderingData.palette);
+            this.renderSprites(sprites, renderingData.palette);
         }
 
         if (!this.ctx) {

@@ -342,6 +342,7 @@ export default class Cpu {
     }
 
     read(address: Word, size?: "Byte" | "Word"): Byte {
+        address &= 0xFFFF;
         if (size === "Word") {
             return this.bus.readByCpu(address) | this.bus.readByCpu(address + 1) << 8;
         }
