@@ -590,6 +590,18 @@ export default class Cpu {
                 }
                 break;
             }
+            case "BVS": {
+                if (this.registers.P.overflow) {
+                    this.registers.PC = addressOrData;
+                }
+                break;
+            }
+            case "BVC": {
+                if (!this.registers.P.overflow) {
+                    this.registers.PC = addressOrData;
+                }
+                break;
+            }
             case "NOPD": {
                 this.registers.PC++;
                 break;
@@ -772,6 +784,7 @@ export default class Cpu {
                 break;
             }
             case "LSR": {
+                console.log("lsr");
                 if (mode === "accumulator") {
 
                     // Aを右シフト、ビット7には0
@@ -814,8 +827,18 @@ export default class Cpu {
                 }
                 break;
             }
+            case "BIT": {
+                // メモリのデータをAでテストします。
+                // A and M の結果でZフラグをセットし、Mのビット7をNへ、ビット6をVへ転送します。
+                // flags: N V Z
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                this.registers.P.zero = !(this.registers.A & data);
+                this.registers.P.negative = !!(data & 0x80);
+                this.registers.P.overflow = !!(data & 0x40);
+                break;
+            }
             default: {
-                throw new Error(`Unknown instruction ${baseName} detected.`);
+                throw new Error(`Unknown instruction ${baseName}_${mode} detected.`);
             }
         }
     }
@@ -877,8 +900,7 @@ export default class Cpu {
         }
 
         if (this.interrupts.isIrqAssert()) {
-
-            // this.processIrq();
+            this.processIrq();
         }
 
         // console.log("PC: " + this.registers.PC.toString(16));

@@ -30,16 +30,24 @@ export default class CpuBus {
         // console.log("readByCpu: " + address.toString(16));
         if (address < 0x0800) {
             return this.ram.read(address);
-        } else if (address < 0x4000) {
+        }
+        else if (address < 0x2000) {
+            // 0x0800～0x1FFF WRAMのミラー
+            return this.ram.read(address - 0x0800);
+        }
+        else if (address < 0x4000) {
 
             // 0x2000～0x2007 PPU レジスタ
             // 0x2008～0x3FFF PPUレジスタのミラー
             return this.ppu.read((address - 0x2000) % 8);
-        } else if (address === 0x4015) {
+        }
+        else if (address === 0x4015) {
             return this.apu.read(address - 0x4000);
-        } else if (address === 0x4016) {
+        }
+        else if (address === 0x4016) {
             return +this.keypad.read(); // convert boolean into nubmer
-        } else if (address >= 0xC000) {
+        }
+        else if (address >= 0xC000) {
 
             // Mirror, if prom block number equals 1
             if (this.programROM.size() <= 0x4000) {
@@ -48,7 +56,8 @@ export default class CpuBus {
 
             // ブロックが2つの場合はミラーじゃない
             return this.programROM.read(address - 0x8000);
-        } else if (address >= 0x8000) {
+        }
+        else if (address >= 0x8000) {
             return this.programROM.read(address - 0x8000);
         }
 
@@ -62,6 +71,7 @@ export default class CpuBus {
         } else if (address < 0x2000) {
 
             // mirror
+            this.ram.write(address - 0x0800, data);
         } else if (address < 0x2008) {
 
             // ppu

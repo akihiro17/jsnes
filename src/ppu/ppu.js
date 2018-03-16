@@ -3,6 +3,7 @@
 import Ram from "../ram/ram";
 import PpuBus from "../bus/ppu-bus";
 import Interrupts from "../interrupts/interrupts";
+import Palette from "./palette";
 import type { Byte, Word } from "../types/common";
 
 // スプライトRAMは256バイトが存在します
@@ -38,7 +39,7 @@ export default class Ppu {
     vram: Ram
     bus: PpuBus;
     vramAddress: Word;
-    palette: Uint8Array;
+    palette: Palette;
     isLowerVramAddr: boolean;
     background: Array<Tile>;
     spriteAddress: Byte;
@@ -56,7 +57,7 @@ export default class Ppu {
         this.vram = new Ram(0x2000);
         this.bus = ppuBus;
         this.vramAddress = 0x0000;
-        this.palette = new Uint8Array(0x20);
+        this.palette = new Palette();
         this.isLowerVramAddr = false;
         this.background = [];
         this.spriteAddress = 0x00;
@@ -81,12 +82,18 @@ export default class Ppu {
             this.cycle -= 341;
             this.line++;
 
+            if (this.hasSpriteHit()) {
+                this.setSpriteHit();
+            }
+
             if (this.line <= 240 && this.line % 8 === 0 && this.scrollY <= 240) {
                 this.buildBackground();
             }
 
             if (this.line === 241) {
                 this.setVblank();
+
+                // this.clearSpriteHit();
 
                 // vBlank割り込み
                 if (this.vBlankIrqEnabled()) {
@@ -104,7 +111,7 @@ export default class Ppu {
                 this.interrupts.deassertNmi();
                 return {
                     background: this.background,
-                    palette: this.palette,
+                    palette: this.palette.read(),
                     sprites: this.sprites
                 };
             }
@@ -162,15 +169,6 @@ export default class Ppu {
         const spriteId = this.getSpriteId(tileX, tileY, offset);
         const sprite = this.buildSprite(spriteId, this.backgroundTableOffset());
 
-        if (blockId) {
-
-            // console.log("blockId: " + blockId + " tileX: " + tileX + " tileY: " + tileY);
-        }
-        if (spriteId) {
-
-            // console.log("spriteId: " + spriteId);
-            // console.log("sprite: " + sprite);
-        }
         return {
             sprite,
             paletteId,
@@ -280,7 +278,6 @@ export default class Ppu {
             return;
         }
         if (address === 0x0004) {
-
             // console.log("sprite vram address: " + this.spriteAddress + " data: " + data);
             this.spriteRam.write(this.spriteAddress, data);
             this.spriteAddress++;
@@ -308,7 +305,7 @@ export default class Ppu {
         }
 
         // PPUレジスタ
-        if (address === 0x0000 || address === 0x0001) {
+        if (address === 0x0000 || address === 0x0001 || address === 0x0002) {
 
             // console.log("ppu register: " + data.toString(2) + " to " + address);
             this.registers[address] = data;
@@ -348,22 +345,22 @@ export default class Ppu {
             // pallete
             if (this.vramAddress >= 0x3F00 && this.vramAddress < 0x4000) {
 
-                // console.log("palette write");
+                console.log(`palette write: ${this.vramAddress.toString(16)} data: ${data.toString(16)}`);
                 if (data > 64) {
                     throw `address: ${this.vramAddress - 0x3F00}, data: ${data}`;
                 }
-                this.palette[this.vramAddress - 0x3F00] = data;
+                this.palette.write(this.vramAddress - 0x3F00, data);
             } else {
 
                 // ネームテーブル、属性テーブル
-                // console.log("vram write: " + this.calculateAddress().toString(16));
+                // console.log(`vram write: ${this.calculateAddress().toString(16)} data: ${data}`);
                 this.writeVram(this.calculateAddress(), data);
             }
         } else {
             console.log(`write character ram:: ${this.vramAddress}`);
             this.bus.writeByPpu(this.vramAddress, data);
         }
-        this.vramAddress += 0x01;
+        this.vramAddress += this.vramOffset;
     }
 
     writeVram(address: Word, data: Byte) {
@@ -397,6 +394,45 @@ export default class Ppu {
         this.registers[0x02] &= 0x7F;
     }
 
+    setSpriteHit() {
+        this.registers[0x02] |= 0x40;
+    }
+
+    clearSpriteHit() {
+        this.registers[0x02] &= 0xBF;
+    }
+
+    hasSpriteHit(): boolean {
+        // 0番スプライトを画面に描画すると$2002の6ビット目が1になる
+        const sprite0_y = this.spriteRam.read(0);
+
+        return this.line === sprite0_y && this.isBackgroundEnable() && this.isSpriteEnable();
+    }
+
+    /*
+      コントロールレジスタ2
+      bit  説明
+      ------------------------------------------
+      7-5  背景色
+      000:黒
+      001:緑
+      010:青
+      100:赤
+      4    スプライト有効　0:無効、1:有効
+      3    背景有効　0:無効、1:有効
+      2    スプライトマスク、画面左8ピクセルを描画しない。0:描画しない、1:描画
+      1    背景マスク、画面左8ピクセルを描画しない。0:描画しない、1:描画
+      0    ディスプレイタイプ　0:カラー、1:モノクロ
+    */
+
+    isBackgroundEnable(): boolean {
+        return !!(this.registers[0x01] & 0x08);
+    }
+
+    isSpriteEnable(): boolean {
+        return !!(this.registers[0x01] & 0x10);
+    }
+
     backgroundTableOffset(): Word {
 
         // コントロールレジスタ1
@@ -422,6 +458,10 @@ export default class Ppu {
 
     nameTableId(): Byte {
         return this.registers[0x00] & 0x03;
+    }
+
+    get vramOffset(): Byte {
+        return this.registers[0x00] & 0x04 ? 32 : 1;
     }
 
     transferSprite(index: Byte, data: Byte) {

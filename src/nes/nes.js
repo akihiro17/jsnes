@@ -7,6 +7,7 @@ import CpuBus from "../bus/cpu-bus";
 import PpuBus from "../bus/ppu-bus";
 import Cpu from "../cpu/cpu";
 import Ppu from "../ppu/ppu";
+import Ppu2 from "../ppu/ppu2";
 import KeyPad from "../key-pad/key-pad";
 import Dma from "../dma/dma";
 import Apu from "../apu/apu";

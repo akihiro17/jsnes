@@ -36,11 +36,13 @@ export default class CanvasRenderer {
     render(renderingData: RenderingData) {
         const background = renderingData.background;
 
-        for (let i = 0; i < background.length; i++) {
-            const x = (i % 32) * 8;
-            const y = ~~(i / 32) * 8;
+        if (background) {
+            for (let i = 0; i < background.length; i++) {
+                const x = (i % 32) * 8;
+                const y = ~~(i / 32) * 8;
 
-            this.renderTile(background[i].sprite, background[i].paletteId, background[i].scrollX, background[i].scrollY, renderingData.palette, x, y);
+                this.renderTile(background[i].sprite, background[i].paletteId, background[i].scrollX, background[i].scrollY, renderingData.palette, x, y);
+            }
         }
 
         const sprites = renderingData.sprites;
@@ -56,7 +58,6 @@ export default class CanvasRenderer {
     }
 
     renderTile(sprite: Sprite, paletteId: Byte, scrollX: Byte, scrollY: Byte, palette: Uint8Array, tileX: number, tileY: number) {
-
         // ?
         const offsetX = scrollX % 8;
         const offsetY = scrollY % 8;
@@ -66,6 +67,7 @@ export default class CanvasRenderer {
 
                 // 0x3F00～0x3F0Fはバックグラウンドパレット
                 const paletteIndex = paletteId * 4 + sprite[i][j];
+                // console.log(`paletteIn: ${paletteIndex}, sprite: ${sprite[i][j]}`);
                 const colorId = palette[paletteIndex];
                 const color = colors[colorId];
 
