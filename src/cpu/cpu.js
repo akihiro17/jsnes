@@ -458,12 +458,14 @@ export default class Cpu {
 
     execInstruction(baseName: string, mode: string, addressOrData: Word) {
         switch (baseName) {
-            case "SEI": {
-                this.registers.P.interrupt = false;
-                break;
-            }
-            case "CLD": {
-                this.registers.P.decimal = false;
+            case "LDA": {
+                if (mode === "immediate") {
+                    this.registers.A = addressOrData;
+                } else {
+                    this.registers.A = this.read(addressOrData);
+                }
+                this.registers.P.negative = !!(this.registers.A & 0x80);
+                this.registers.P.zero = !this.registers.A;
                 break;
             }
             case "LDX": {
@@ -476,16 +478,6 @@ export default class Cpu {
                 this.registers.P.zero = !this.registers.X;
                 break;
             }
-            case "LDA": {
-                if (mode === "immediate") {
-                    this.registers.A = addressOrData;
-                } else {
-                    this.registers.A = this.read(addressOrData);
-                }
-                this.registers.P.negative = !!(this.registers.A & 0x80);
-                this.registers.P.zero = !this.registers.A;
-                break;
-            }
             case "LDY": {
                 if (mode === "immediate") {
                     this.registers.Y = addressOrData;
@@ -494,12 +486,6 @@ export default class Cpu {
                 }
                 this.registers.P.negative = !!(this.registers.Y & 0x80);
                 this.registers.P.zero = !this.registers.Y;
-                break;
-            }
-            case "TXS": {
-
-                // this.registers.SP = this.registers.X;
-                this.registers.SP = this.registers.X + 0x0100;
                 break;
             }
             case "STA": {
@@ -514,20 +500,138 @@ export default class Cpu {
                 this.write(addressOrData, this.registers.Y);
                 break;
             }
-            case "JSR": {
-
-                // ジャンプサブルーチン命令（JSR）によってスタックに格納する復帰アドレスは、
-                // 次の命令の一つ前のアドレス（JSRの最後のバイト）であり、
-                // リターンサブルーチン命令（RTS）によってインクリメントします
-                const PC = this.registers.PC - 1;
-
-                this.push((PC >> 8) & 0xFF);
-                this.push(PC & 0xFF);
-                this.registers.PC = addressOrData;
+            case "TAX": {
+                this.registers.X = this.registers.A;
+                this.registers.P.negative = !!(this.registers.X & 0x80);
+                this.registers.P.zero = !this.registers.X;
                 break;
             }
-            case "JMP": {
-                this.registers.PC = addressOrData;
+            case "TAY": {
+                this.registers.Y = this.registers.A;
+                this.registers.P.negative = !!(this.registers.Y & 0x80);
+                this.registers.P.zero = !this.registers.Y;
+                break;
+            }
+            case "TXA": {
+                this.registers.A = this.registers.X;
+                this.registers.P.negative = !!(this.registers.A & 0x80);
+                this.registers.P.zero = !this.registers.A;
+                break;
+            }
+            case "TXS": {
+                this.registers.SP = this.registers.X + 0x0100;
+                break;
+            }
+            case "TYA": {
+                this.registers.A = this.registers.Y;
+                this.registers.P.negative = !!(this.registers.A & 0x80);
+                this.registers.P.zero = !this.registers.A;
+                break;
+            }
+            case "ADC": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const operated = this.registers.A + data + this.registers.P.carry;
+
+                this.registers.P.negative = !!(operated & 0x80);
+                this.registers.P.zero = !(operated & 0xFF);
+                this.registers.P.carry = operated > 0xFF;
+
+                // 異符号の足し算、かつ演算結果の符号が違う場合オーバーフロー
+                // most significant bit(0x80)で判定できる
+                this.registers.P.overflow =
+                    !!(((this.registers.A ^ data) & 0x80) === 0) && !!(((this.registers.A ^ operated) & 0x80) === 1);
+                this.registers.A = operated & 0xFF;
+                break;
+            }
+            case "AND": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const result = this.registers.A & data;
+
+                this.registers.P.negative = !!(result & 0x80);
+                this.registers.P.zero = !result;
+                this.registers.A = result & 0xFF;
+                break;
+            }
+            case "BIT": {
+                // メモリのデータをAでテストします。
+                // A and M の結果でZフラグをセットし、Mのビット7をNへ、ビット6をVへ転送します。
+                // flags: N V Z
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                this.registers.P.zero = !(this.registers.A & data);
+                this.registers.P.negative = !!(data & 0x80);
+                this.registers.P.overflow = !!(data & 0x40);
+                break;
+            }
+            case "CMP": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const compared = this.registers.A - data;
+
+                this.registers.P.negative = !!(compared & 0x80);
+                this.registers.P.zero = !(compared & 0xFF);
+
+                // ?
+                this.registers.P.carry = compared >= 0;
+                break;
+            }
+            case "CPX": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const compared = this.registers.X - data;
+
+                this.registers.P.negative = !!(compared & 0x80);
+                this.registers.P.zero = !(compared & 0xFF);
+
+                // ?
+                this.registers.P.carry = compared >= 0;
+                break;
+            }
+            case "CPY": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const compared = this.registers.Y - data;
+
+                this.registers.P.negative = !!(compared & 0x80);
+                this.registers.P.zero = !(compared & 0xFF);
+
+                // ?
+                this.registers.P.carry = compared >= 0;
+                break;
+            }
+            case "DEC": {
+                const data = this.read(addressOrData);
+                const decremented = (data - 1) & 0xFF;
+
+                this.registers.P.negative = !!(decremented & 0x80);
+                this.registers.P.zero = !decremented;
+                this.write(addressOrData, decremented);
+                break;
+            }
+            case "DEX": {
+                this.registers.X = (this.registers.X - 1) & 0xFF;
+                this.registers.P.negative = !!(this.registers.X & 0x80);
+                this.registers.P.zero = !this.registers.X;
+                break;
+            }
+            case "DEY": {
+                this.registers.Y = (this.registers.Y - 1) & 0xFF;
+                this.registers.P.negative = !!(this.registers.Y & 0x80);
+                this.registers.P.zero = !this.registers.Y;
+                break;
+            }
+            case "EOR": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const result = this.registers.A ^ data;
+
+                this.registers.P.negative = !!(result & 0x80);
+                this.registers.P.zero = !result;
+                this.registers.A = result & 0xFF;
+                break;
+            }
+            case "INC": {
+                const data = this.read(addressOrData);
+                const incremented = (data + 1) & 0xFF;
+
+                this.registers.P.negative = !!(incremented & 0x80);
+                this.registers.P.zero = !incremented;
+                this.write(addressOrData, incremented);
                 break;
             }
             case "INX": {
@@ -542,10 +646,160 @@ export default class Cpu {
                 this.registers.P.zero = !this.registers.Y;
                 break;
             }
-            case "DEY": {
-                this.registers.Y = (this.registers.Y - 1) & 0xFF;
-                this.registers.P.negative = !!(this.registers.Y & 0x80);
-                this.registers.P.zero = !this.registers.Y;
+            case "LSR": {
+                if (mode === "accumulator") {
+
+                    // Aを右シフト、ビット7には0
+                    // Aのビット0 -> C
+                    const acc = this.registers.A & 0xFF; //こうすると右シフトでビット7に0がはいる
+
+                    this.registers.P.carry = !!(acc & 0x01);
+                    this.registers.A = acc >> 1;
+                    this.registers.P.zero = !this.registers.A;
+                } else {
+                    const data = this.read(addressOrData);
+
+                    this.registers.P.carry = !!(data & 0x01);
+                    this.registers.P.zero = !(data >> 1);
+                    this.write(addressOrData, data >> 1);
+                }
+
+                // ビット7が0だから
+                this.registers.P.negative = false;
+                break;
+            }
+            case "ORA": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+                const result = this.registers.A | data;
+
+                this.registers.P.negative = !!(result & 0x80);
+                this.registers.P.zero = !result;
+                this.registers.A = result & 0xFF;
+                break;
+            }
+            case "ROL": {
+                if (mode === "accumulator") {
+
+                    // Aを左シフト、ビット0にはC
+                    // C <- Aのビット7
+                    const acc = this.registers.A;
+
+                    this.registers.A = (acc << 1) & 0xFF | (this.registers.P.carry ? 0x01 : 0x00);
+                    this.registers.P.carry = !!(acc & 0x80);
+                    this.registers.P.zero = !(this.registers.A);
+                    this.registers.P.negative = !!(this.registers.A & 0x80);
+                } else {
+                    const data = this.read(addressOrData);
+
+                    this.registers.A = (data << 1) & 0xFF | (this.registers.P.carry ? 0x01 : 0x00);
+                    this.registers.P.carry = !!(data & 0x80);
+                    this.registers.P.zero = !(this.registers.A);
+                    this.registers.P.negative = !!(this.registers.A & 0x80);
+                }
+                break;
+            }
+            case "SBC": {
+                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+
+                // A - M - not C -> A
+                const operated = this.registers.A - data - (this.registers.P.carry ? 0 : 1);
+
+                this.registers.P.negative = !!(operated & 0x80);
+                this.registers.P.zero = !(operated);
+                this.registers.P.carry = operated > 0xFF;
+
+                // 異符号の足し算、かつ演算結果の符号が違う場合オーバーフロー
+                // most significant bit(0x80)で判定できる
+                this.registers.P.overflow =
+                    !!(((this.registers.A ^ data) & 0x80) === 0) && !!(((this.registers.A ^ operated) & 0x80) === 1);
+                this.registers.A = operated & 0xFF;
+                break;
+            }
+            case "PHA": {
+                this.push(this.registers.A);
+                break;
+            }
+            case "PLA": {
+                this.registers.A = this.pop();
+                this.registers.P.negative = !!(this.registers.A & 0x80);
+                this.registers.P.zero = !this.registers.A;
+                break;
+            }
+            case "JMP": {
+                this.registers.PC = addressOrData;
+                break;
+            }
+            case "JSR": {
+
+                // ジャンプサブルーチン命令（JSR）によってスタックに格納する復帰アドレスは、
+                // 次の命令の一つ前のアドレス（JSRの最後のバイト）であり、
+                // リターンサブルーチン命令（RTS）によってインクリメントします
+                const PC = this.registers.PC - 1;
+
+                this.push((PC >> 8) & 0xFF);
+                this.push(PC & 0xFF);
+                this.registers.PC = addressOrData;
+                break;
+            }
+            case "RTS": {
+                this.registers.PC = this.pop(); // 下位バイト
+                this.registers.PC += this.pop() << 8; // 上位バイト
+                this.registers.PC++;
+                break;
+            }
+            case "RTI": {
+                this.popStatus();
+                this.registers.PC = this.pop(); // 下位バイト
+                this.registers.PC += this.pop() << 8; // 上位バイト
+                this.registers.P.reserved = true;
+                break;
+            }
+            case "BCS": {
+                if (this.registers.P.carry) {
+                    this.registers.PC = addressOrData;
+                }
+                break;
+            }
+            case "BEQ": {
+                if (this.registers.P.zero) {
+                    this.registers.PC = addressOrData;
+                }
+                break;
+            }
+            case "BNE": {
+                if (!this.registers.P.zero) {
+                    this.registers.PC = addressOrData;
+                }
+                break;
+            }
+            case "BPL": {
+                if (!this.registers.P.negative) {
+                    this.registers.PC = addressOrData;
+                }
+                break;
+            }
+            case "BVS": {
+                if (this.registers.P.overflow) {
+                    this.registers.PC = addressOrData;
+                }
+                break;
+            }
+            case "BVC": {
+                if (!this.registers.P.overflow) {
+                    this.registers.PC = addressOrData;
+                }
+                break;
+            }
+            case "CLD": {
+                this.registers.P.decimal = false;
+                break;
+            }
+            case "CLC": {
+                this.registers.P.carry = false;
+                break;
+            }
+            case "SEI": {
+                this.registers.P.interrupt = false;
                 break;
             }
             case "BRK": {
@@ -572,269 +826,12 @@ export default class Cpu {
                 this.registers.PC--;
                 break;
             }
-            case "BNE": {
-                if (!this.registers.P.zero) {
-                    this.registers.PC = addressOrData;
-                }
-                break;
-            }
-            case "BCS": {
-                if (this.registers.P.carry) {
-                    this.registers.PC = addressOrData;
-                }
-                break;
-            }
-            case "BEQ": {
-                if (this.registers.P.zero) {
-                    this.registers.PC = addressOrData;
-                }
-                break;
-            }
-            case "BVS": {
-                if (this.registers.P.overflow) {
-                    this.registers.PC = addressOrData;
-                }
-                break;
-            }
-            case "BVC": {
-                if (!this.registers.P.overflow) {
-                    this.registers.PC = addressOrData;
-                }
-                break;
-            }
-            case "NOPD": {
-                this.registers.PC++;
-                break;
-            }
             case "NOPI": {
                 this.registers.PC += 2;
                 break;
             }
-            case "BPL": {
-                if (!this.registers.P.negative) {
-                    this.registers.PC = addressOrData;
-                }
-                break;
-            }
-            case "CPX": {
-                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
-                const compared = this.registers.X - data;
-
-                this.registers.P.negative = !!(compared & 0x80);
-                this.registers.P.zero = !compared;
-
-                // ?
-                this.registers.P.carry = compared >= 0;
-                break;
-            }
-            case "CPY": {
-                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
-                const compared = this.registers.Y - data;
-
-                this.registers.P.negative = !!(compared & 0x80);
-                this.registers.P.zero = !compared;
-
-                // ?
-                this.registers.P.carry = compared >= 0;
-                break;
-            }
-            case "CMP": {
-                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
-                const compared = this.registers.A - data;
-
-                this.registers.P.negative = !!(compared & 0x80);
-                this.registers.P.zero = !compared;
-
-                // ?
-                this.registers.P.carry = compared >= 0;
-                break;
-            }
-            case "AND": {
-                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
-                const result = this.registers.A & data;
-
-                this.registers.P.negative = !!(result & 0x80);
-                this.registers.P.zero = !result;
-                this.registers.A = result & 0xFF;
-                break;
-            }
-            case "INC": {
-                const data = this.read(addressOrData);
-                const incremented = (data + 1) & 0xFF;
-
-                this.registers.P.negative = !!(incremented & 0x80);
-                this.registers.P.zero = !incremented;
-                this.write(addressOrData, incremented);
-                break;
-            }
-            case "DEC": {
-                const data = this.read(addressOrData);
-                const decremented = (data - 1) & 0xFF;
-
-                this.registers.P.negative = !!(decremented & 0x80);
-                this.registers.P.zero = !decremented;
-                this.write(addressOrData, decremented);
-                break;
-            }
-            case "ADC": {
-                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
-                const operated = this.registers.A + data + this.registers.P.carry;
-
-                this.registers.P.negative = !!(operated & 0x80);
-                this.registers.P.zero = !(operated);
-                this.registers.P.carry = operated > 0xFF;
-
-                // 異符号の足し算、かつ演算結果の符号が違う場合オーバーフロー
-                // most significant bit(0x80)で判定できる
-                this.registers.P.overflow =
-                    !!(((this.registers.A ^ data) & 0x80) === 0) && !!(((this.registers.A ^ operated) & 0x80) === 1);
-                this.registers.A = operated & 0xFF;
-                break;
-            }
-            case "SBC": {
-                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
-
-                // A - M - not C -> A
-                const operated = this.registers.A - data - (this.registers.P.carry ? 0 : 1);
-
-                this.registers.P.negative = !!(operated & 0x80);
-                this.registers.P.zero = !(operated);
-                this.registers.P.carry = operated > 0xFF;
-
-                // 異符号の足し算、かつ演算結果の符号が違う場合オーバーフロー
-                // most significant bit(0x80)で判定できる
-                this.registers.P.overflow =
-                    !!(((this.registers.A ^ data) & 0x80) === 0) && !!(((this.registers.A ^ operated) & 0x80) === 1);
-                this.registers.A = operated & 0xFF;
-                break;
-            }
-            case "RTS": {
-                this.registers.PC = this.pop(); // 下位バイト
-                this.registers.PC += this.pop() << 8; // 上位バイト
+            case "NOPD": {
                 this.registers.PC++;
-                break;
-            }
-            case "RTI": {
-                this.popStatus();
-                this.registers.PC = this.pop(); // 下位バイト
-                this.registers.PC += this.pop() << 8; // 上位バイト
-                this.registers.P.reserved = true;
-                break;
-            }
-            case "EOR": {
-                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
-                const result = this.registers.A ^ data;
-
-                this.registers.P.negative = !!(result & 0x80);
-                this.registers.P.zero = !result;
-                this.registers.A = result & 0xFF;
-                break;
-            }
-            case "ORA": {
-                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
-                const result = this.registers.A | data;
-
-                this.registers.P.negative = !!(result & 0x80);
-                this.registers.P.zero = !result;
-                this.registers.A = result & 0xFF;
-                break;
-            }
-            case "DEX": {
-                this.registers.X = (this.registers.X - 1) & 0xFF;
-                this.registers.P.negative = !!(this.registers.X & 0x80);
-                this.registers.P.zero = !this.registers.X;
-                break;
-            }
-            case "TYA": {
-                this.registers.A = this.registers.Y;
-                this.registers.P.negative = !!(this.registers.A & 0x80);
-                this.registers.P.zero = !this.registers.A;
-                break;
-            }
-            case "TXA": {
-                this.registers.A = this.registers.X;
-                this.registers.P.negative = !!(this.registers.A & 0x80);
-                this.registers.P.zero = !this.registers.A;
-                break;
-            }
-            case "TAX": {
-                this.registers.X = this.registers.A;
-                this.registers.P.negative = !!(this.registers.X & 0x80);
-                this.registers.P.zero = !this.registers.X;
-                break;
-            }
-            case "TAY": {
-                this.registers.Y = this.registers.A;
-                this.registers.P.negative = !!(this.registers.Y & 0x80);
-                this.registers.P.zero = !this.registers.Y;
-                break;
-            }
-            case "CLC": {
-                this.registers.P.carry = false;
-                break;
-            }
-            case "PHA": {
-                this.push(this.registers.A);
-                break;
-            }
-            case "PLA": {
-                this.registers.A = this.pop();
-                this.registers.P.negative = !!(this.registers.A & 0x80);
-                this.registers.P.zero = !this.registers.A;
-                break;
-            }
-            case "LSR": {
-                console.log("lsr");
-                if (mode === "accumulator") {
-
-                    // Aを右シフト、ビット7には0
-                    // Aのビット0 -> C
-                    const acc = this.registers.A & 0xFF;
-
-                    this.registers.P.carry = !!(acc & 0x01);
-                    this.registers.A = acc >> 1;
-                    this.registers.P.zero = !this.registers.A;
-                } else {
-                    const data = this.read(addressOrData);
-
-                    this.registers.P.carry = !!(data & 0x01);
-                    this.registers.P.zero = !(data >> 1);
-                    this.write(addressOrData, data >> 1);
-                }
-
-                // ビット7が0だから
-                this.registers.P.negative = false;
-                break;
-            }
-            case "ROL": {
-                if (mode === "accumulator") {
-
-                    // Aを左シフト、ビット0にはC
-                    // C <- Aのビット7
-                    const acc = this.registers.A;
-
-                    this.registers.A = (acc << 1) & 0xFF | (this.registers.P.carry ? 0x01 : 0x00);
-                    this.registers.P.carry = !!(acc & 0x80);
-                    this.registers.P.zero = !(this.registers.A);
-                    this.registers.P.negative = !!(this.registers.A & 0x80);
-                } else {
-                    const data = this.read(addressOrData);
-
-                    this.registers.A = (data << 1) & 0xFF | (this.registers.P.carry ? 0x01 : 0x00);
-                    this.registers.P.carry = !!(data & 0x80);
-                    this.registers.P.zero = !(this.registers.A);
-                    this.registers.P.negative = !!(this.registers.A & 0x80);
-                }
-                break;
-            }
-            case "BIT": {
-                // メモリのデータをAでテストします。
-                // A and M の結果でZフラグをセットし、Mのビット7をNへ、ビット6をVへ転送します。
-                // flags: N V Z
-                const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
-                this.registers.P.zero = !(this.registers.A & data);
-                this.registers.P.negative = !!(data & 0x80);
-                this.registers.P.overflow = !!(data & 0x40);
                 break;
             }
             default: {

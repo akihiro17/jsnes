@@ -7,7 +7,6 @@ import CpuBus from "../bus/cpu-bus";
 import PpuBus from "../bus/ppu-bus";
 import Cpu from "../cpu/cpu";
 import Ppu from "../ppu/ppu";
-import Ppu2 from "../ppu/ppu2";
 import KeyPad from "../key-pad/key-pad";
 import Dma from "../dma/dma";
 import Apu from "../apu/apu";
@@ -29,10 +28,11 @@ export default class Nes {
     constructor() {
         this.frame = this.frame.bind(this);
         this.renderer = new CanvasRenderer();
+        // this.renderer = new DebugRenderer();
     }
 
     load(nesFile: ArrayBuffer) {
-        const { programROM, characterROM } = parse(nesFile);
+        const { programROM, characterROM, isHorizontalMirror } = parse(nesFile);
 
         const program = new Rom(programROM);
 
@@ -46,7 +46,8 @@ export default class Nes {
         }
         this.ppubus = new PpuBus(characterRam);
         this.interrupts = new Interrupts();
-        this.ppu = new Ppu(this.ppubus, this.interrupts);
+        this.ppu = new Ppu(this.ppubus, this.interrupts, { isHorizontalMirror });
+        // this.ppu = new DebugPpu(this.ppubus, this.interrupts, {isHorizontalMirror: false});
 
         // ram
         const ram = new Ram(0x800);
