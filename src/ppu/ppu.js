@@ -78,6 +78,137 @@ export default class Ppu {
         this.vramReadBuf = 0;
     }
 
+    get nameTableId(): Byte {
+        return this.registers[0x00] & 0x03;
+    }
+
+    get vramOffset(): Byte {
+        return this.registers[0x00] & 0x04 ? 32 : 1;
+    }
+
+    setSpriteHit() {
+        this.registers[0x02] |= 0x40;
+    }
+
+    clearSpriteHit() {
+        this.registers[0x02] &= 0xBF;
+    }
+
+    hasSpriteHit(): boolean {
+        // 0番スプライトを画面に描画すると$2002の6ビット目が1になる
+        const sprite0_y = this.spriteRam.read(0);
+
+        return this.line === sprite0_y && this.isBackgroundEnable() && this.isSpriteEnable();
+    }
+
+    vBlankIrqEnabled(): boolean {
+        return !!(this.registers[0] & 0x80);
+    }
+
+    /*
+      コントロールレジスタ2
+      bit  説明
+      ------------------------------------------
+      7-5  背景色
+      000:黒
+      001:緑
+      010:青
+      100:赤
+      4    スプライト有効　0:無効、1:有効
+      3    背景有効　0:無効、1:有効
+      2    スプライトマスク、画面左8ピクセルを描画しない。0:描画しない、1:描画
+      1    背景マスク、画面左8ピクセルを描画しない。0:描画しない、1:描画
+      0    ディスプレイタイプ　0:カラー、1:モノクロ
+    */
+
+    isBackgroundEnable(): boolean {
+        return !!(this.registers[0x01] & 0x08);
+    }
+
+    isSpriteEnable(): boolean {
+        return !!(this.registers[0x01] & 0x10);
+    }
+
+    scrollTileX(): Byte {
+
+        /*
+          Name table id and address
+          +------------+------------+
+          |            |            |
+          |  0(0x2000) |  1(0x2400) |
+          |            |            |
+          +------------+------------+
+          |            |            |
+          |  2(0x2800) |  3(0x2C00) |
+          |            |            |
+          +------------+------------+
+         */
+
+        return ~~((this.scrollX + ((this.nameTableId % 2) * 256)) / 8);
+    }
+
+    scrollTileY(): Byte {
+        return ~~((this.scrollY + (~~(this.nameTableId / 2) * 240)) / 8);
+    }
+
+    tileY(): Byte {
+        return ~~(this.line / 8) + this.scrollTileY();
+    }
+
+    backgroundTableOffset(): Word {
+
+        // コントロールレジスタ1
+        // bit 用途
+        // --------------------------------------------------------
+        // 7   VBlank時にNMIを発生　0:無効、1:発生
+        // 6   PPUマスタースレーブ、常に1
+        // 5   スプライトサイズ　0:8x8、1:8x16
+        // 4   背景パターンテーブルアドレス指定　0:$0000、1:$1000
+        // 3   スプライトパターンテーブルアドレス指定　0:$0000、1:$1000
+        // 2   PPUメモリアドレスインクリメント　0:+=1、1:+=32
+        // 1-0 ネームテーブルアドレス指定
+        return this.registers[0] & 0x10 ? 0x1000 : 0x0000;
+    }
+
+    setVblank() {
+        this.registers[0x02] |= 0x80;
+    }
+
+    clearVblank() {
+        this.registers[0x02] &= 0x7F;
+    }
+
+    // 1ブロックは、2x2タイル
+    // | 0 | 1 |
+    // | 2 | 3 |
+    getBlockId(tileX: Byte, tileY: Byte): Byte {
+        return ~~((tileX % 4) / 2) + (~~(tileY % 4) / 2) * 2;
+    }
+
+    getAttribute(tileX: Byte, tileY: Byte, offset: Word): Byte {
+        const address = ~~(tileX / 4) + (~~(tileY / 4) * 8) + 0x03c0 + offset;
+
+        return this.vram.read(this.mirrorDownSpriteAddr(address));
+    }
+
+    getSpriteId(tileX: Byte, tileY: Byte, offset: Word): Byte {
+        const tileNumber = tileY * 32 + tileX;
+
+        return this.vram.read(this.mirrorDownSpriteAddr(tileNumber + offset));
+    }
+
+    mirrorDownSpriteAddr(address: Word) {
+        // 垂直ミラー
+        if (!this.config.isHorizontalMirror) return address;
+        // 水平ミラー
+        // 画面2か4なら、1つ前の画面のアドレスを返す
+        if (0x0400 <= address && address < 0x0800 || address >= 0x0C00) {
+            return address - 0x0400;
+        }
+
+        return address;
+    }
+
     run(cycle: number): ?RenderingData {
         this.cycle += cycle;
 
@@ -129,6 +260,32 @@ export default class Ppu {
         return null;
     }
 
+    buildTile(tileX: Byte, tileY: Byte, offset: Word) {
+
+        // console.log("tileX:" + tileX);
+        // console.log("tileY:" + tileY);
+
+        const blockId = this.getBlockId(tileX, tileY);
+
+        // 0x23C0が0xE4であれば1110 0100だから
+        // それぞれのブロックのパレットIDは以下のようになる
+        // ブロック0: 00
+        // ブロック1: 01
+        // ブロック2: 10
+        // ブロック3: 11
+        const attr = this.getAttribute(tileX, tileY, offset);
+        const paletteId = (attr >> (blockId * 2)) & 0x03;
+        const spriteId = this.getSpriteId(tileX, tileY, offset);
+        const sprite = this.buildSprite(spriteId, this.backgroundTableOffset());
+
+        return {
+            sprite,
+            paletteId,
+            scrollX: this.scrollX,
+            scrollY: this.scrollY
+        };
+    }
+
     buildBackground() {
         const clampedTileY = this.tileY() % 30;
 
@@ -160,58 +317,6 @@ export default class Ppu {
         }
     }
 
-    buildTile(tileX: Byte, tileY: Byte, offset: Word) {
-
-        // console.log("tileX:" + tileX);
-        // console.log("tileY:" + tileY);
-
-        const blockId = this.getBlockId(tileX, tileY);
-
-        // 0x23C0が0xE4であれば1110 0100だから
-        // それぞれのブロックのパレットIDは以下のようになる
-        // ブロック0: 00
-        // ブロック1: 01
-        // ブロック2: 10
-        // ブロック3: 11
-        const attr = this.getAttribute(tileX, tileY, offset);
-        const paletteId = (attr >> (blockId * 2)) & 0x03;
-        const spriteId = this.getSpriteId(tileX, tileY, offset);
-        const sprite = this.buildSprite(spriteId, this.backgroundTableOffset());
-
-        if (tileX === 0 && tileY === 1) {
-            // console.log("----");
-            // console.log(`attr: ${attr}`);
-            // console.log(`paletteId: ${paletteId}`);
-            // console.log(`spriteId: ${spriteId}`);
-            // console.log("----");
-        }
-
-        return {
-            sprite,
-            paletteId,
-            scrollX: this.scrollX,
-            scrollY: this.scrollY
-        };
-    }
-
-    buildSprite(spriteId: Byte, offset: Word) {
-
-        // 8 x 8
-        const sprite = new Array(8).fill(0).map(() => [0, 0, 0, 0, 0, 0, 0, 0]);
-
-        for (let i = 0; i < 16; i = i + 1) {
-            const address = spriteId * 16 + i + offset;
-            const ram = this.readCharacterRam(address);
-
-            for (let j = 0; j < 8; j = j + 1) {
-                if (ram & (0x80 >> j)) {
-                    sprite[i % 8][j] += 0x01 << ~~(i / 8);
-                }
-            }
-        }
-        return sprite;
-    }
-
     buildSprites() {
         const offset = this.spriteTableOffset();
 
@@ -241,53 +346,64 @@ export default class Ppu {
         }
     }
 
-    tileY(): Byte {
-        return ~~(this.line / 8) + this.scrollTileY();
-    }
+    buildSprite(spriteId: Byte, offset: Word) {
 
-    scrollTileX(): Byte {
+        // 8 x 8
+        const sprite = new Array(8).fill(0).map(() => [0, 0, 0, 0, 0, 0, 0, 0]);
 
-        /*
-          Name table id and address
-          +------------+------------+
-          |            |            |
-          |  0(0x2000) |  1(0x2400) |
-          |            |            |
-          +------------+------------+
-          |            |            |
-          |  2(0x2800) |  3(0x2C00) |
-          |            |            |
-          +------------+------------+
-         */
+        for (let i = 0; i < 16; i = i + 1) {
+            const address = spriteId * 16 + i + offset;
+            const ram = this.readCharacterRam(address);
 
-        return ~~((this.scrollX + ((this.nameTableId % 2) * 256)) / 8);
-    }
-
-    scrollTileY(): Byte {
-        return ~~((this.scrollY + (~~(this.nameTableId / 2) * 240)) / 8);
-    }
-
-    // 1ブロックは、2x2タイル
-    // | 0 | 1 |
-    // | 2 | 3 |
-    getBlockId(tileX: Byte, tileY: Byte): Byte {
-        return ~~((tileX % 4) / 2) + (~~(tileY % 4) / 2) * 2;
-    }
-
-    getSpriteId(tileX: Byte, tileY: Byte, offset: Word): Byte {
-        const address = tileY * 32 + tileX + offset;
-
-        return this.vram.read(this.mirrorDownSpriteAddr(address));
-    }
-
-    getAttribute(tileX: Byte, tileY: Byte, offset: Word): Byte {
-        const address = ~~(tileX / 4) + (~~(tileY / 4) * 8) + 0x03c0 + offset;
-
-        return this.vram.read(this.mirrorDownSpriteAddr(address));
+            for (let j = 0; j < 8; j = j + 1) {
+                if (ram & (0x80 >> j)) {
+                    sprite[i % 8][j] += 0x01 << ~~(i / 8);
+                }
+            }
+        }
+        return sprite;
     }
 
     readCharacterRam(address: Word): Byte {
         return this.bus.readByPpu(address);
+    }
+
+    readVramData(): Byte {
+        const buf = this.vramReadBuf;
+        // When reading while the VRAM address is in the range 0-$3EFF (i.e., before the palettes),
+        // the read will return the contents of an internal read buffer.
+        // This internal buffer is updated only when reading PPUDATA
+        if (this.vramAddress >= 0x2000) {
+            const address = this.calculateAddress();
+            this.vramAddress += this.vramOffset;
+            // palette
+            // if (address >= 0x0F00) {
+            //     return this.vram.read(address);
+            // }
+            this.vramReadBuf = this.vram.read(address);
+        }
+        else {
+            this.vramReadBuf = this.readCharacterRam(this.vramAddress);
+            this.vramAddress += this.vramOffset;
+        }
+        return buf;
+    }
+
+    read(address: Word): Byte {
+        if (address === 0x0002) {
+            this.isHorizontalScroll = true;
+            const data = this.registers[0x02];
+
+            this.clearVblank();
+            return data;
+        } else if (address === 0x0004) {
+            return this.spriteRam.read(this.spriteAddress);
+        }
+        else if (address === 0x0007) {
+            return this.readVramData();
+        }
+        throw `ppu: unexpected read address: ${address.toString(16)}`;
+
     }
 
     write(address: Word, data: Byte): void {
@@ -333,44 +449,6 @@ export default class Ppu {
         throw `unexpected write address(ppu): ${address.toString(16)}`;
     }
 
-    read(address: Word): Byte {
-        if (address === 0x0002) {
-            this.isHorizontalScroll = true;
-            const data = this.registers[0x02];
-
-            this.clearVblank();
-            return data;
-        } else if (address === 0x0004) {
-            return this.spriteRam.read(this.spriteAddress);
-        }
-        else if (address === 0x0007) {
-            return this.readVramData();
-        }
-        throw `ppu: unexpected read address: ${address.toString(16)}`;
-
-    }
-
-    readVramData(): Byte {
-        const buf = this.vramReadBuf;
-        // When reading while the VRAM address is in the range 0-$3EFF (i.e., before the palettes),
-        // the read will return the contents of an internal read buffer.
-        // This internal buffer is updated only when reading PPUDATA
-        if (this.vramAddress >= 0x2000) {
-            const address = this.calculateAddress();
-            this.vramAddress += this.vramOffset;
-            // palette
-            // if (address >= 0x0F00) {
-            //     return this.vram.read(address);
-            // }
-            this.vramReadBuf = this.vram.read(address);
-        }
-        else {
-            this.vramReadBuf = this.readCharacterRam(this.vramAddress);
-            this.vramAddress += this.vramOffset;
-        }
-        return buf;
-    }
-
     writeVramAddress(data: Byte): void {
         if (this.isLowerVramAddr) {
             this.vramAddress += data;
@@ -405,10 +483,6 @@ export default class Ppu {
         this.vramAddress += this.vramOffset;
     }
 
-    writeVram(address: Word, data: Byte) {
-        this.vram.write(address, data);
-    }
-
     writeScrollData(data: Byte) {
         if (this.isHorizontalScroll) {
             this.scrollX = data & 0xFF;
@@ -417,6 +491,10 @@ export default class Ppu {
             this.scrollY = data & 0xFF;
             this.isHorizontalScroll = true;
         }
+    }
+
+    writeVram(address: Word, data: Byte) {
+        this.vram.write(address, data);
     }
 
     calculateAddress(): Byte {
@@ -428,94 +506,8 @@ export default class Ppu {
         return this.vramAddress - 0x2000;
     }
 
-    mirrorDownSpriteAddr(address: Word) {
-        // 垂直ミラー
-        if (!this.config.isHorizontalMirror) return address;
-        // 水平ミラー
-        // 画面2か4なら、1つ前の画面のアドレスを返す
-        if (0x0400 <= address && address < 0x800 || address >= 0x0C00) {
-            return address - 0x0400;
-        }
-
-        return address;
-    }
-
-    setVblank() {
-        this.registers[0x02] |= 0x80;
-    }
-
-    clearVblank() {
-        this.registers[0x02] &= 0x7F;
-    }
-
-    setSpriteHit() {
-        this.registers[0x02] |= 0x40;
-    }
-
-    clearSpriteHit() {
-        this.registers[0x02] &= 0xBF;
-    }
-
-    hasSpriteHit(): boolean {
-        // 0番スプライトを画面に描画すると$2002の6ビット目が1になる
-        const sprite0_y = this.spriteRam.read(0);
-
-        return this.line === sprite0_y && this.isBackgroundEnable() && this.isSpriteEnable();
-    }
-
-    /*
-      コントロールレジスタ2
-      bit  説明
-      ------------------------------------------
-      7-5  背景色
-      000:黒
-      001:緑
-      010:青
-      100:赤
-      4    スプライト有効　0:無効、1:有効
-      3    背景有効　0:無効、1:有効
-      2    スプライトマスク、画面左8ピクセルを描画しない。0:描画しない、1:描画
-      1    背景マスク、画面左8ピクセルを描画しない。0:描画しない、1:描画
-      0    ディスプレイタイプ　0:カラー、1:モノクロ
-    */
-
-    isBackgroundEnable(): boolean {
-        return !!(this.registers[0x01] & 0x08);
-    }
-
-    isSpriteEnable(): boolean {
-        return !!(this.registers[0x01] & 0x10);
-    }
-
-    backgroundTableOffset(): Word {
-
-        // コントロールレジスタ1
-        // bit 用途
-        // --------------------------------------------------------
-        // 7   VBlank時にNMIを発生　0:無効、1:発生
-        // 6   PPUマスタースレーブ、常に1
-        // 5   スプライトサイズ　0:8x8、1:8x16
-        // 4   背景パターンテーブルアドレス指定　0:$0000、1:$1000
-        // 3   スプライトパターンテーブルアドレス指定　0:$0000、1:$1000
-        // 2   PPUメモリアドレスインクリメント　0:+=1、1:+=32
-        // 1-0 ネームテーブルアドレス指定
-        return this.registers[0] & 0x10 ? 0x1000 : 0x0000;
-    }
-
     spriteTableOffset(): Word {
         return this.registers[0] & 0x08 ? 0x1000 : 0x0000;
-    }
-
-    vBlankIrqEnabled(): boolean {
-        return !!(this.registers[0] & 0x80);
-    }
-
-    get nameTableId(): Byte {
-        return this.registers[0x00] & 0x03;
-    }
-
-    get vramOffset(): Byte {
-        return this.registers[0x00] & 0x04 ? 32 : 1;
     }
 
     transferSprite(index: Byte, data: Byte) {

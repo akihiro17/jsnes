@@ -756,6 +756,12 @@ export default class Cpu {
                 this.registers.P.reserved = true;
                 break;
             }
+            case "BCC": {
+                if (!this.registers.P.carry) {
+                    this.registers.PC = addressOrData;
+                }
+                break;
+            }
             case "BCS": {
                 if (this.registers.P.carry) {
                     this.registers.PC = addressOrData;
@@ -774,8 +780,8 @@ export default class Cpu {
                 }
                 break;
             }
-            case "BPL": {
-                if (!this.registers.P.negative) {
+            case "BVC": {
+                if (!this.registers.P.overflow) {
                     this.registers.PC = addressOrData;
                 }
                 break;
@@ -786,8 +792,14 @@ export default class Cpu {
                 }
                 break;
             }
-            case "BVC": {
-                if (!this.registers.P.overflow) {
+            case "BPL": {
+                if (!this.registers.P.negative) {
+                    this.registers.PC = addressOrData;
+                }
+                break;
+            }
+            case "BMI": {
+                if (this.registers.P.negative) {
                     this.registers.PC = addressOrData;
                 }
                 break;
