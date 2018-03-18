@@ -55,6 +55,7 @@ export default class Ppu {
     scrollY: Byte;
     isHorizontalScroll: boolean;
     config: Config;
+    vramReadBuf: Byte;
 
     constructor(ppuBus: PpuBus, interrupts: Interrupts, config: Config) {
         this.cycle = 0;
@@ -74,6 +75,7 @@ export default class Ppu {
         this.scrollY = 0;
         this.isHorizontalScroll = true;
         this.config = config;
+        this.vramReadBuf = 0;
     }
 
     run(cycle: number): ?RenderingData {
@@ -119,7 +121,7 @@ export default class Ppu {
                 return {
                     background: this.isBackgroundEnable ? this.background : null,
                     palette: this.palette.read(),
-                    sprites: this.sprites
+                    sprites: this.isSpriteEnable() ? this.sprites : null
                 };
             }
         }
@@ -341,8 +343,32 @@ export default class Ppu {
         } else if (address === 0x0004) {
             return this.spriteRam.read(this.spriteAddress);
         }
-        throw `unexpected read address: ${address.toString(16)}`;
+        else if (address === 0x0007) {
+            return this.readVramData();
+        }
+        throw `ppu: unexpected read address: ${address.toString(16)}`;
 
+    }
+
+    readVramData(): Byte {
+        const buf = this.vramReadBuf;
+        // When reading while the VRAM address is in the range 0-$3EFF (i.e., before the palettes),
+        // the read will return the contents of an internal read buffer.
+        // This internal buffer is updated only when reading PPUDATA
+        if (this.vramAddress >= 0x2000) {
+            const address = this.calculateAddress();
+            this.vramAddress += this.vramOffset;
+            // palette
+            // if (address >= 0x0F00) {
+            //     return this.vram.read(address);
+            // }
+            this.vramReadBuf = this.vram.read(address);
+        }
+        else {
+            this.vramReadBuf = this.readCharacterRam(this.vramAddress);
+            this.vramAddress += this.vramOffset;
+        }
+        return buf;
     }
 
     writeVramAddress(data: Byte): void {
@@ -394,7 +420,7 @@ export default class Ppu {
     }
 
     calculateAddress(): Byte {
-        if (this.vramAddress >= 0x3000 && this.vramAddress < 0x3f00) {
+        if (this.vramAddress >= 0x3000 && this.vramAddress < 0x3F00) {
 
             // mirror
             return this.vramAddress - 0x3000;
@@ -407,7 +433,7 @@ export default class Ppu {
         if (!this.config.isHorizontalMirror) return address;
         // 水平ミラー
         // 画面2か4なら、1つ前の画面のアドレスを返す
-        if (0x0400 <= address && address < 0x800 || address > 0x0C00) {
+        if (0x0400 <= address && address < 0x800 || address >= 0x0C00) {
             return address - 0x0400;
         }
 

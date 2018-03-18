@@ -706,8 +706,9 @@ export default class Cpu {
                 const operated = this.registers.A - data - (this.registers.P.carry ? 0 : 1);
 
                 this.registers.P.negative = !!(operated & 0x80);
-                this.registers.P.zero = !(operated);
-                this.registers.P.carry = operated > 0xFF;
+                this.registers.P.zero = !(operated & 0xFF);
+                // ?
+                this.registers.P.carry = operated >= 0x00;
 
                 // 異符号の足し算、かつ演算結果の符号が違う場合オーバーフロー
                 // most significant bit(0x80)で判定できる
@@ -797,6 +798,10 @@ export default class Cpu {
             }
             case "CLC": {
                 this.registers.P.carry = false;
+                break;
+            }
+            case "SEC": {
+                this.registers.P.carry = true;
                 break;
             }
             case "SEI": {
