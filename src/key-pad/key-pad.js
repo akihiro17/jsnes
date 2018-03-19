@@ -6,13 +6,13 @@ export default class KeyPad {
     index: number;
     isSet: boolean;
     keyBuffer: Array<boolean>;
-    keyRegistors: Array<boolean>;
+    keyRegisters: Array<boolean>;
 
     constructor() {
         this.index = 0;
         this.isSet = false;
         this.keyBuffer = [];
-        this.keyRegistors = [];
+        this.keyRegisters = [];
 
         document.addEventListener("keydown", (event: KeyboardEvent) => {
             this.onKeyDown(this.getKeyIndex(event.key));
@@ -24,7 +24,7 @@ export default class KeyPad {
     }
 
     read(): boolean {
-        return this.keyRegistors[this.index++];
+        return this.keyRegisters[this.index++];
     }
 
     write(data: Byte) {
@@ -33,7 +33,7 @@ export default class KeyPad {
         } else if (!(data & 0x01) && this.isSet === true) {
             this.index = 0;
             this.isSet = false;
-            this.keyRegistors = [...this.keyBuffer];
+            this.keyRegisters = [...this.keyBuffer];
         }
     }
 
