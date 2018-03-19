@@ -44,10 +44,6 @@ export default class CpuBus {
         else if (address === 0x4015) {
             return this.apu.read(address - 0x4000);
         }
-        else if (address >= 6000 && address < 0x8000) {
-            // 拡張RAM
-            return 0;
-        }
         else if (address === 0x4016) {
             return +this.keypad.read(); // convert boolean into nubmer
         }
