@@ -145,7 +145,7 @@ export default class Apu {
 
             // frame counter
             // $4017 MI-- ---- Mode (M, 0 = 4-step, 1 = 5-step), IRQ inhibit flag (I)
-            this.sequencerMode = data & 0x80;
+            this.sequencerMode = data & 0x80 ? 1 : 0;
             this.enableIrq = !!(data & 0x40);
             this.registers[address] = data;
         }
