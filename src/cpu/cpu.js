@@ -327,8 +327,12 @@ export default class Cpu {
     registers: Registers;
     bus: CpuBus
     interrupts: Interrupts;
+    hasBranched: boolean;
     prev: number;
     prev2: number;
+    counter: number;
+    min: number;
+    max: number;
 
     constructor(bus: CpuBus, interrupts: Interrupts) {
         this.registers = {
@@ -337,8 +341,12 @@ export default class Cpu {
         };
         this.bus = bus;
         this.interrupts = interrupts;
+        this.hasBranched = false;
         this.prev = 0;
         this.prev2 = 0;
+        this.counter = 0;
+        this.min = 100000;
+        this.max = 110000;
     }
 
     read(address: Word, size?: "Byte" | "Word"): Byte {
@@ -367,6 +375,11 @@ export default class Cpu {
         // スタックポインタも16ビットのアドレス空間を指す必要があるのですが、上位8bitは0x01に固定されています
         this.registers.SP += 1;
         return this.read(0x0100 | this.registers.SP & 0xFF);
+    }
+
+    branch(address: Word) {
+        this.registers.PC = address;
+        this.hasBranched = true;
     }
 
     pushStatus() {
@@ -405,37 +418,68 @@ export default class Cpu {
         return this.read(address, size);
     }
 
-    getAddressOrData(mode: string): Word {
+    getAddressOrData(mode: string): { addressOrData: Word, additionalCycle: number } {
         switch (mode) {
+            case "accumulator": {
+                return {
+                    addressOrData: 0x00,
+                    additionalCycle: 0
+                };
+            }
             case "implied": {
-                return 0x00;
+                return {
+                    addressOrData: 0x00,
+                    additionalCycle: 0
+                };
             }
-            case "immediate": {
-                return this.fetch(this.registers.PC);
-            }
-            case "zeroPage": {
-                return this.fetch(this.registers.PC);
-            }
-            case "zeroPageX": {
-                return (this.fetch(this.registers.PC) + this.registers.X) & 0xFFFF;
-            }
-            case "absolute": {
-                return this.fetch(this.registers.PC, "Word");
-            }
-            case "absoluteX": {
-                return (this.fetch(this.registers.PC, "Word") + this.registers.X) & 0xFFFF;
-            }
-            case "absoluteY": {
-                return (this.fetch(this.registers.PC, "Word") + this.registers.Y) & 0xFFFF;
-            }
+           case "immediate": {
+                return {
+                    addressOrData: this.fetch(this.registers.PC),
+                    additionalCycle: 0
+                };
+           }
             case "relative": {
                 const base = this.fetch(this.registers.PC);
                 const offset = this.registers.PC;
 
-                if (base < 0x80) {
-                    return base + offset;
-                }
-                return base + offset - 0x100;
+                const address = base < 0x80 ? base + offset : base + offset - 0x100;
+
+                return {
+                    addressOrData: address,
+                    additionalCycle: (address & 0xFF00) !== (this.registers.PC & 0xFF00) ? 1 : 0
+                };
+            }
+            case "zeroPage": {
+                return {
+                    addressOrData: this.fetch(this.registers.PC),
+                    additionalCycle: 0
+                };
+            }
+            case "zeroPageX": {
+                return {
+                    addressOrData: (this.fetch(this.registers.PC) + this.registers.X) & 0xFFFF,
+                    additionalCycle: 0
+                };
+            }
+            case "absolute": {
+                return {
+                    addressOrData: this.fetch(this.registers.PC, "Word"),
+                    additionalCycle: 0
+                };
+            }
+            case "absoluteX": {
+                const address = this.fetch(this.registers.PC, "Word");
+                return {
+                    addressOrData: (address + this.registers.X) & 0xFFFF,
+                    additionalCycle: (address & 0xFF00) !== ((address + this.registers.X) & 0xFF00) ? 1 : 0
+                };
+            }
+            case "absoluteY": {
+                const address = this.fetch(this.registers.PC, "Word");
+                return {
+                    addressOrData: (address + this.registers.Y) & 0xFFFF,
+                    additionalCycle: (address & 0xFF00) !== ((address + this.registers.Y) & 0xFF00) ? 1 : 0
+                };
             }
             case "postIndexedIndirect": {
 
@@ -446,10 +490,10 @@ export default class Cpu {
                 const baseAddr = this.read(addrOrData) + (this.read((addrOrData + 1) & 0xFF) << 8);
                 const addr = baseAddr + this.registers.Y;
 
-                return addr;
-            }
-            case "accumulator": {
-                return 0x00;
+                return {
+                    addressOrData: addr & 0xFFFF,
+                    additionalCycle: (addr & 0xFF00) !== (baseAddr & 0xFF00) ? 1 : 0
+                };
             }
             default: {
                 throw new Error(`Unknown addressing mode ${mode} detected.`);
@@ -458,6 +502,7 @@ export default class Cpu {
     }
 
     execInstruction(baseName: string, mode: string, addressOrData: Word) {
+        this.hasBranched = false;
         switch (baseName) {
             case "LDA": {
                 if (mode === "immediate") {
@@ -691,11 +736,11 @@ export default class Cpu {
                     this.registers.P.negative = !!(this.registers.A & 0x80);
                 } else {
                     const data = this.read(addressOrData);
-
-                    this.registers.A = (data << 1) & 0xFF | (this.registers.P.carry ? 0x01 : 0x00);
+                    const dataToWrite = (data << 1) & 0xFF | (this.registers.P.carry ? 0x01 : 0x00);
+                    this.write(addressOrData, dataToWrite);
                     this.registers.P.carry = !!(data & 0x80);
-                    this.registers.P.zero = !(this.registers.A);
-                    this.registers.P.negative = !!(this.registers.A & 0x80);
+                    this.registers.P.zero = !(dataToWrite);
+                    this.registers.P.negative = !!(dataToWrite & 0x80);
                 }
                 break;
             }
@@ -758,49 +803,49 @@ export default class Cpu {
             }
             case "BCC": {
                 if (!this.registers.P.carry) {
-                    this.registers.PC = addressOrData;
+                    this.branch(addressOrData);
                 }
                 break;
             }
             case "BCS": {
                 if (this.registers.P.carry) {
-                    this.registers.PC = addressOrData;
+                    this.branch(addressOrData);
                 }
                 break;
             }
             case "BEQ": {
                 if (this.registers.P.zero) {
-                    this.registers.PC = addressOrData;
+                    this.branch(addressOrData);
                 }
                 break;
             }
             case "BNE": {
                 if (!this.registers.P.zero) {
-                    this.registers.PC = addressOrData;
+                    this.branch(addressOrData);
                 }
                 break;
             }
             case "BVC": {
                 if (!this.registers.P.overflow) {
-                    this.registers.PC = addressOrData;
+                    this.branch(addressOrData);
                 }
                 break;
             }
             case "BVS": {
                 if (this.registers.P.overflow) {
-                    this.registers.PC = addressOrData;
+                    this.branch(addressOrData);
                 }
                 break;
             }
             case "BPL": {
                 if (!this.registers.P.negative) {
-                    this.registers.PC = addressOrData;
+                    this.branch(addressOrData);
                 }
                 break;
             }
             case "BMI": {
                 if (this.registers.P.negative) {
-                    this.registers.PC = addressOrData;
+                    this.branch(addressOrData);
                 }
                 break;
             }
@@ -817,7 +862,7 @@ export default class Cpu {
                 break;
             }
             case "SEI": {
-                this.registers.P.interrupt = false;
+                this.registers.P.interrupt = true;
                 break;
             }
             case "BRK": {
@@ -930,7 +975,18 @@ export default class Cpu {
             throw `opecode: ${opecode.toString(16)} :prev: ${this.prev}prev2: ${this.prev2}`;
         }
         const { fullName, baseName, mode, cycle } = instructions[opecode.toString(16).toUpperCase()];
-        const addressOrData = this.getAddressOrData(mode);
+        const { addressOrData, additionalCycle } = this.getAddressOrData(mode);
+
+        this.counter++;
+
+        if (this.min <= this.counter && this.counter <= this.max) {
+            if (baseName !== "BEQ" && baseName !== "CMP") {
+                // console.log("PC:", this.registers.PC, baseName, mode, addressOrData, "n:", this.registers.P.negative, "z:", this.registers.P.zero);
+            }
+        }
+        else if (this.counter > this.max){
+            // throw "stop";
+        }
 
         // console.log("addressOrdata:" + addressOrData.toString(16));
         this.prev = opecode;
@@ -938,6 +994,6 @@ export default class Cpu {
 
         this.execInstruction(baseName, mode, addressOrData);
 
-        return cycle;
+        return cycle + additionalCycle + (this.hasBranched ? 1 : 0);
     }
 }
