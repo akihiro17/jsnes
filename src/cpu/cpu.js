@@ -495,6 +495,20 @@ export default class Cpu {
                     additionalCycle: (addr & 0xFF00) !== (baseAddr & 0xFF00) ? 1 : 0
                 };
             }
+            case 'indirectAbsolute': {
+                // Absolute Addressingで得られる番地に格納されている値を下位アドレス、
+                // その次の番地に格納されている値を上位アドレスとした番地を演算対象とする
+
+                // 2、3番目のバイトで示されるアドレスに格納されている値を実効アドレスの下位バイト、
+                // その次のアドレスに格納されている値を実効アドレスの上位バイトとします。
+                // このインクリメントで下位バイトからのキャリーは無視します。(addrOrData & 0xFF00) | (((addrOrData & 0xFF) + 1) & 0xFF)
+                const addrOrData = this.fetch(this.registers.PC, "Word");
+                const addr = this.read(addrOrData) + (this.read((addrOrData & 0xFF00) | (((addrOrData & 0xFF) + 1) & 0xFF)) << 8);
+                return {
+                    addressOrData: addr & 0xFFFF,
+                    additionalCycle: 0
+                };
+            }
             default: {
                 throw new Error(`Unknown addressing mode ${mode} detected.`);
             }
@@ -723,6 +737,27 @@ export default class Cpu {
                 this.registers.A = result & 0xFF;
                 break;
             }
+            case "ASL": {
+                if (mode === "accumulator") {
+
+                    // Aを左シフト、ビット0には0
+                    // C <- Aのビット7
+                    const acc = this.registers.A;
+
+                    this.registers.A = (acc << 1) & 0xFF;
+                    this.registers.P.carry = !!(acc & 0x80);
+                    this.registers.P.zero = !(this.registers.A);
+                    this.registers.P.negative = !!(this.registers.A & 0x80);
+                } else {
+                    const data = this.read(addressOrData);
+                    const dataToWrite = (data << 1) & 0xFF;
+                    this.write(addressOrData, dataToWrite);
+                    this.registers.P.carry = !!(data & 0x80);
+                    this.registers.P.zero = !(dataToWrite);
+                    this.registers.P.negative = !!(dataToWrite & 0x80);
+                }
+                break;
+            }
             case "ROL": {
                 if (mode === "accumulator") {
 
@@ -853,6 +888,10 @@ export default class Cpu {
                 this.registers.P.decimal = false;
                 break;
             }
+            case "SED": {
+                this.registers.P.decimal = true;
+                break;
+            }
             case "CLC": {
                 this.registers.P.carry = false;
                 break;
@@ -895,6 +934,9 @@ export default class Cpu {
             }
             case "NOPD": {
                 this.registers.PC++;
+                break;
+            }
+            case "NOP": {
                 break;
             }
             default: {
