@@ -461,6 +461,12 @@ export default class Cpu {
                     additionalCycle: 0
                 };
             }
+            case "zeroPageY": {
+                return {
+                    addressOrData: (this.fetch(this.registers.PC) + this.registers.Y) & 0xFFFF,
+                    additionalCycle: 0
+                };
+            }
             case "absolute": {
                 return {
                     addressOrData: this.fetch(this.registers.PC, "Word"),
@@ -479,6 +485,16 @@ export default class Cpu {
                 return {
                     addressOrData: (address + this.registers.Y) & 0xFFFF,
                     additionalCycle: (address & 0xFF00) !== ((address + this.registers.Y) & 0xFF00) ? 1 : 0
+                };
+            }
+            case 'preIndexedIndirect': {
+                // 上位アドレスを$00とし、 また2番目のバイトにインデックスレジスタXを加算（8）した値を下位アドレスとします。
+                // このアドレスに格納されている値を実効アドレスの下位バイト、 そしてその次のアドレスに格納されている値を実効アドレスの上位バイトとします。 このインクリメントにおいてキャリーは無視します
+                const baseAddr = (this.fetch(this.registers.PC) + this.registers.X) & 0xFF;
+                const addr = this.read(baseAddr) + (this.read((baseAddr + 1) & 0xFF) << 8);
+                return {
+                    addressOrData: addr & 0xFFFF,
+                    additionalCycle: (addr & 0xFF00) !== (baseAddr & 0xFF00) ? 1 : 0
                 };
             }
             case "postIndexedIndirect": {
@@ -586,6 +602,12 @@ export default class Cpu {
                 this.registers.A = this.registers.Y;
                 this.registers.P.negative = !!(this.registers.A & 0x80);
                 this.registers.P.zero = !this.registers.A;
+                break;
+            }
+            case "TSX": {
+                this.registers.X = this.registers.SP & 0xFF;
+                this.registers.P.negative = !!(this.registers.X & 0x80);
+                this.registers.P.zero = !this.registers.X;
                 break;
             }
             case "ADC": {
@@ -779,6 +801,27 @@ export default class Cpu {
                 }
                 break;
             }
+            case "ROR": {
+                if (mode === "accumulator") {
+
+                    // Aを右シフト、ビット0にはC
+                    // C <- Aのビット0
+                    const acc = this.registers.A;
+
+                    this.registers.A = (acc >> 1) | (this.registers.P.carry ? 0x80 : 0x00);
+                    this.registers.P.carry = !!(acc & 0x01);
+                    this.registers.P.zero = !(this.registers.A);
+                    this.registers.P.negative = !!(this.registers.A & 0x80);
+                } else {
+                    const data = this.read(addressOrData);
+                    const dataToWrite = (data >> 1) | (this.registers.P.carry ? 0x80 : 0x00);
+                    this.write(addressOrData, dataToWrite);
+                    this.registers.P.carry = !!(data & 0x80);
+                    this.registers.P.zero = !(dataToWrite);
+                    this.registers.P.negative = !!(dataToWrite & 0x80);
+                }
+                break;
+            }
             case "SBC": {
                 const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
 
@@ -805,6 +848,18 @@ export default class Cpu {
                 this.registers.A = this.pop();
                 this.registers.P.negative = !!(this.registers.A & 0x80);
                 this.registers.P.zero = !this.registers.A;
+                break;
+            }
+            case "PHP": {
+                // ?
+                this.registers.P.break = true;
+                this.pushStatus();
+                break;
+            }
+            case "PLP": {
+                this.popStatus();
+                // ?
+                this.registers.P.reserved = true;
                 break;
             }
             case "JMP": {
@@ -890,6 +945,10 @@ export default class Cpu {
             }
             case "SED": {
                 this.registers.P.decimal = true;
+                break;
+            }
+            case "CLV": {
+                this.registers.P.overflow = false;
                 break;
             }
             case "CLC": {
