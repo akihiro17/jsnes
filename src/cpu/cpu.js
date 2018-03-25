@@ -998,6 +998,18 @@ export default class Cpu {
             case "NOP": {
                 break;
             }
+            case "LAX": {
+                // Shortcut for LDA value then TAX.
+                this.registers.A = this.registers.X = this.read(addressOrData);
+                this.registers.P.negative = !!(this.registers.A & 0x80);
+                this.registers.P.zero = !this.registers.A;
+                break;
+            }
+            case "SAX": {
+                // Stores the bitwise AND of A and X. As with STA and STX, no flags are affected.
+                this.write(addressOrData, this.registers.A & this.registers.X);
+                break;
+            }
             default: {
                 throw new Error(`Unknown instruction ${baseName}_${mode} detected.`);
             }
