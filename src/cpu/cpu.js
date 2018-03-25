@@ -82,7 +82,7 @@ const instructions = {
     "A8": { fullName: "TAY", baseName: "TAY", mode: "implied", cycle: cycles[0xA8] },
     "AA": { fullName: "TAX", baseName: "TAX", mode: "implied", cycle: cycles[0xAA] },
     "BA": { fullName: "TSX", baseName: "TSX", mode: "implied", cycle: cycles[0xBA] },
-    "8": { fullName: "PHP", baseName: "PHP", mode: "implied", cycle: cycles[0x08] },
+    "08": { fullName: "PHP", baseName: "PHP", mode: "implied", cycle: cycles[0x08] },
     "28": { fullName: "PLP", baseName: "PLP", mode: "implied", cycle: cycles[0x28] },
     "48": { fullName: "PHA", baseName: "PHA", mode: "implied", cycle: cycles[0x48] },
     "68": { fullName: "PLA", baseName: "PLA", mode: "implied", cycle: cycles[0x68] },
@@ -132,19 +132,19 @@ const instructions = {
     "59": { fullName: "EOR_ABSY", baseName: "EOR", mode: "absoluteY", cycle: cycles[0x59] },
     "41": { fullName: "EOR_INDX", baseName: "EOR", mode: "preIndexedIndirect", cycle: cycles[0x41] },
     "51": { fullName: "EOR_INDY", baseName: "EOR", mode: "postIndexedIndirect", cycle: cycles[0x51] },
-    "9": { fullName: "ORA_IMM", baseName: "ORA", mode: "immediate", cycle: cycles[0x09] },
-    "5": { fullName: "ORA_ZERO", baseName: "ORA", mode: "zeroPage", cycle: cycles[0x05] },
-    "D": { fullName: "ORA_ABS", baseName: "ORA", mode: "absolute", cycle: cycles[0x0D] },
+    "09": { fullName: "ORA_IMM", baseName: "ORA", mode: "immediate", cycle: cycles[0x09] },
+    "05": { fullName: "ORA_ZERO", baseName: "ORA", mode: "zeroPage", cycle: cycles[0x05] },
+    "0D": { fullName: "ORA_ABS", baseName: "ORA", mode: "absolute", cycle: cycles[0x0D] },
     "15": { fullName: "ORA_ZEROX", baseName: "ORA", mode: "zeroPageX", cycle: cycles[0x15] },
     "1D": { fullName: "ORA_ABSX", baseName: "ORA", mode: "absoluteX", cycle: cycles[0x1D] },
     "19": { fullName: "ORA_ABSY", baseName: "ORA", mode: "absoluteY", cycle: cycles[0x19] },
-    "1": { fullName: "ORA_INDX", baseName: "ORA", mode: "preIndexedIndirect", cycle: cycles[0x01] },
+    "01": { fullName: "ORA_INDX", baseName: "ORA", mode: "preIndexedIndirect", cycle: cycles[0x01] },
     "11": { fullName: "ORA_INDY", baseName: "ORA", mode: "postIndexedIndirect", cycle: cycles[0x11] },
     "24": { fullName: "BIT_ZERO", baseName: "BIT", mode: "zeroPage", cycle: cycles[0x24] },
     "2C": { fullName: "BIT_ABS", baseName: "BIT", mode: "absolute", cycle: cycles[0x2C] },
-    "A": { fullName: "ASL", baseName: "ASL", mode: "accumulator", cycle: cycles[0x0A] },
-    "6": { fullName: "ASL_ZERO", baseName: "ASL", mode: "zeroPage", cycle: cycles[0x06] },
-    "E": { fullName: "ASL_ABS", baseName: "ASL", mode: "absolute", cycle: cycles[0x0E] },
+    "0A": { fullName: "ASL", baseName: "ASL", mode: "accumulator", cycle: cycles[0x0A] },
+    "06": { fullName: "ASL_ZERO", baseName: "ASL", mode: "zeroPage", cycle: cycles[0x06] },
+    "0E": { fullName: "ASL_ABS", baseName: "ASL", mode: "absolute", cycle: cycles[0x0E] },
     "16": { fullName: "ASL_ZEROX", baseName: "ASL", mode: "zeroPageX", cycle: cycles[0x16] },
     "1E": { fullName: "ASL_ABSX", baseName: "ASL", mode: "absoluteX", cycle: cycles[0x1E] },
     "4A": { fullName: "LSR", baseName: "LSR", mode: "accumulator", cycle: cycles[0x4A] },
@@ -180,7 +180,7 @@ const instructions = {
     "38": { fullName: "SEC", baseName: "SEC", mode: "implied", cycle: cycles[0x38] },
     "78": { fullName: "SEI", baseName: "SEI", mode: "implied", cycle: cycles[0x78] },
     "EA": { fullName: "NOP", baseName: "NOP", mode: "implied", cycle: cycles[0xEA] },
-    "0": { fullName: "BRK", baseName: "BRK", mode: "implied", cycle: cycles[0x00] },
+    "00": { fullName: "BRK", baseName: "BRK", mode: "implied", cycle: cycles[0x00] },
     "20": { fullName: "JSR_ABS", baseName: "JSR", mode: "absolute", cycle: cycles[0x20] },
     "4C": { fullName: "JMP_ABS", baseName: "JMP", mode: "absolute", cycle: cycles[0x4C] },
     "6C": { fullName: "JMP_INDABS", baseName: "JMP", mode: "indirectAbsolute", cycle: cycles[0x6C] },
@@ -1072,10 +1072,14 @@ export default class Cpu {
         }
 
         // console.log(instructions[opecode.toString(16).toUpperCase()]);
-        if (!instructions[opecode.toString(16).toUpperCase()]) {
+        const instruction = opecode <= 0x0F ?
+                  instructions["0" + opecode.toString(16).toUpperCase()] :
+                  instructions[opecode.toString(16).toUpperCase()];
+
+        if (!instruction) {
             throw `opecode: ${opecode.toString(16)} :prev: ${this.prev}prev2: ${this.prev2}`;
         }
-        const { fullName, baseName, mode, cycle } = instructions[opecode.toString(16).toUpperCase()];
+        const { fullName, baseName, mode, cycle } = instruction;
         const { addressOrData, additionalCycle } = this.getAddressOrData(mode);
 
         this.counter++;
