@@ -1068,6 +1068,22 @@ export default class Cpu {
         this.registers.PC = this.read(0xFFFE, "Word");
     }
 
+    showRegisters() {
+        const status: Byte =
+                  (+this.registers.P.negative) << 7 |
+                  (+this.registers.P.overflow) << 6 |
+                  (+this.registers.P.reserved) << 5 |
+                  (+this.registers.P.break) << 4 |
+                  (+this.registers.P.decimal) << 3 |
+                  (+this.registers.P.interrupt) << 2 |
+                  (+this.registers.P.zero) << 1 |
+                  (+this.registers.P.carry);
+        console.log("A:", this.registers.A.toString(16), "X:", this.registers.X.toString(16),
+                    "Y:", this.registers.Y.toString(16), "P:", status.toString(16),
+                    "sp:", this.registers.SP.toString(16));
+
+    }
+
     run(): number {
         if (this.interrupts.isNmiAssert()) {
             this.processNmi();
