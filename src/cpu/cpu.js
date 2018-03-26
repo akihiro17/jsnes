@@ -457,13 +457,13 @@ export default class Cpu {
             }
             case "zeroPageX": {
                 return {
-                    addressOrData: (this.fetch(this.registers.PC) + this.registers.X) & 0xFFFF,
+                    addressOrData: (this.fetch(this.registers.PC) + this.registers.X) & 0xFF,
                     additionalCycle: 0
                 };
             }
             case "zeroPageY": {
                 return {
-                    addressOrData: (this.fetch(this.registers.PC) + this.registers.Y) & 0xFFFF,
+                    addressOrData: (this.fetch(this.registers.PC) + this.registers.Y) & 0xFF,
                     additionalCycle: 0
                 };
             }
