@@ -796,6 +796,7 @@ export default class Cpu {
                     const data = this.read(addressOrData);
                     const dataToWrite = (data << 1) & 0xFF | (this.registers.P.carry ? 0x01 : 0x00);
                     this.write(addressOrData, dataToWrite);
+                    // またASL、ROL命令ではAのビット7を、LSR、ROR命令ではAのビット0をストアします
                     this.registers.P.carry = !!(data & 0x80);
                     this.registers.P.zero = !(dataToWrite);
                     this.registers.P.negative = !!(dataToWrite & 0x80);
@@ -805,7 +806,7 @@ export default class Cpu {
             case "ROR": {
                 if (mode === "accumulator") {
 
-                    // Aを右シフト、ビット0にはC
+                    // Aを右シフト、ビット7にはC
                     // C <- Aのビット0
                     const acc = this.registers.A;
 
@@ -817,7 +818,8 @@ export default class Cpu {
                     const data = this.read(addressOrData);
                     const dataToWrite = (data >> 1) | (this.registers.P.carry ? 0x80 : 0x00);
                     this.write(addressOrData, dataToWrite);
-                    this.registers.P.carry = !!(data & 0x80);
+                    // またASL、ROL命令ではAのビット7を、LSR、ROR命令ではAのビット0をストアします
+                    this.registers.P.carry = !!(data & 0x01);
                     this.registers.P.zero = !(dataToWrite);
                     this.registers.P.negative = !!(dataToWrite & 0x80);
                 }
