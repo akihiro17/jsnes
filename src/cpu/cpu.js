@@ -835,8 +835,9 @@ export default class Cpu {
 
                 // 異符号の足し算、かつ演算結果の符号が違う場合オーバーフロー
                 // most significant bit(0x80)で判定できる
-                this.registers.P.overflow =
-                    !!(((this.registers.A ^ data) & 0x80) === 0) && !!(((this.registers.A ^ operated) & 0x80) === 1);
+                this.registers.P.overflow = (
+                    (((this.registers.A ^ data) & 0x80) !== 0) && ((this.registers.A ^ operated) & 0x80) !== 0
+                );
                 this.registers.A = operated & 0xFF;
                 break;
             }
