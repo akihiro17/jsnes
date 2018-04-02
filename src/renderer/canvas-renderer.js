@@ -110,6 +110,8 @@ export default class CanvasRenderer {
         // |+-------左右反転フラグ、1:反転
         // +--------上下反転フラグ、1:反転
         const paletteId = sprite.attribute & 0x03;
+        const isVerticalReverse = !!(sprite.attribute & 0x80);
+        const isHorizontalReverse = !!(sprite.attribute & 0x40);
 
         for (let i = 0; i < 8; i = i + 1) {
             for (let j = 0; j < 8; j = j + 1) {
@@ -121,8 +123,8 @@ export default class CanvasRenderer {
                     const colorId = palette[paletteIndex];
                     const color = colors[colorId];
 
-                    const x = sprite.x + j;
-                    const y = sprite.y + i;
+                    const x = sprite.x + (isHorizontalReverse ? 7 - j : j);
+                    const y = sprite.y + (isVerticalReverse ? 7 - i : i);
 
                     const index = (x + y * 0x100) * 4;
 
