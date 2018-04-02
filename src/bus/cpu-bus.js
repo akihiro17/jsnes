@@ -47,6 +47,11 @@ export default class CpuBus {
         else if (address === 0x4016) {
             return +this.keypad.read(); // convert boolean into nubmer
         }
+        else if (address === 0x4017) {
+            // joystick 2 data
+            // not implemented
+            return 0;
+        }
         else if (address >= 0xC000) {
 
             // Mirror, if prom block number equals 1
