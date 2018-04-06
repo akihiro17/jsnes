@@ -182,7 +182,7 @@ export default class Ppu {
     // | 0 | 1 |
     // | 2 | 3 |
     getBlockId(tileX: Byte, tileY: Byte): Byte {
-        return ~~((tileX % 4) / 2) + (~~(tileY % 4) / 2) * 2;
+        return ~~((tileX % 4) / 2) + (~~((tileY % 4) / 2)) * 2;
     }
 
     getAttribute(tileX: Byte, tileY: Byte, offset: Word): Byte {
