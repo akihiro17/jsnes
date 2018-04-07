@@ -38,6 +38,9 @@ export default class Nes {
 
         console.log(program.read(0));
         console.log(program.read(1));
+        console.log(characterROM.length);
+        console.log(characterROM[0x7C0]);
+
 
         const characterRam = new Ram(0x4000);
 

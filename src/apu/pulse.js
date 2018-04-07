@@ -147,7 +147,6 @@ export default class Pulse {
         */
 
         if (address === 0x00) {
-            console.log(`pulse 0x00: ${data.toString(2)}`);
 
             // コントロールレジスタ
             /*
@@ -176,8 +175,6 @@ export default class Pulse {
             this.oscillator.setVolume(this.volume);
             this.oscillator.setPulseWidth(this.getPulseWidth(duty));
         } else if (address === 0x01) {
-            console.log("pulse 0x01");
-
             /*
               $4001/$4005   eppp nsss
               7   e   スイープ有効
@@ -202,19 +199,12 @@ export default class Pulse {
             // スイープ量
             this.sweepShiftAmount = data & 0x07;
 
-            console.log("~~~~~~");
-            console.log(this.sweepUnitDivider);
-
             this.flag = true;
-            console.log(this.flag);
-            console.log("~~~~~~");
 
             if (this.sweepUnitDivider === undefined) {
                 throw "sweepUnitDivider is undefined";
             }
         } else if (address === 0x02) {
-            console.log("pulse 0x02");
-
             // $4002/$4006   llll llll
             // 7-0 l   チャンネル周期下位
             // 全部で12bitある
@@ -222,8 +212,6 @@ export default class Pulse {
             this.dividerForFrequency += data;
 
         } else if (address === 0x03) {
-            console.log("pulse 0x03");
-
             /*
               $4003/$4007   cccc chhh
               7-3 c   長さカウンタインデクス
