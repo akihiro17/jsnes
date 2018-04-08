@@ -223,7 +223,7 @@ export default class Ppu {
     run(cycle: number): ?RenderingData {
         this.cycle += cycle;
 
-        // this.run2();
+        this.run2();
 
         if (this.line === 0) {
             this.background = [];
@@ -282,51 +282,11 @@ export default class Ppu {
         const fetchCycle = preFetchCycle || visibleCycle;
 
         if (this.isBackgroundEnable) {
-            if (renderLine && fetchCycle) {
-                switch (this.cycle % 8) {
-                    case 1: {
-                        // console.log("fetch nametable byte");
-                        const v = this.v;
-	                const address = 0x0000 | (v & 0x0FFF);
-	                this.nameTableByte = this.vram.read(this.mirrorDownSpriteAddr(address));
-                        this.nTableId = (v & 0x0600) >> 10;
-                        // console.log("nametableByte:", this.nameTableByte, this.nTableId, address.toString(16));
-                        break;
-                    }
-                    case 3: {
-                        // console.log("fetch attribute table byte");
-                        break;
-                    }
-                    case 5: {
-                        // console.log("fetch low tile byte");
-                        break;
-                    }
-                    case 7: {
-                        // console.log("fetch hight tile byte");
-                        break;
-                    }
-                    case 0: {
-                        // console.log("fetch store tile byte");
-                        break;
-                    }
-                    default: {
-                    }
-                }
-            }
-
             if (preLine && this.cycle >= 280 && this.cycle <= 304) {
 		this.copyY();
 	    }
 
             if (renderLine) {
-                if (fetchCycle && this.cycle % 8 === 0) {
-                    // console.log("increment x");
-                    this.incrementX();
-                }
-                if (this.cycle === 256) {
-                    // console.log("increment Y");
-                    this.incrementY();
-                }
                 if (this.cycle === 257) {
                     // console.log("copy x");
                     this.copyX();
@@ -335,41 +295,41 @@ export default class Ppu {
         }
     }
 
-    incrementX() {
-        if ((this.v & 0x001F) === 31) {
-            this.v &= 0xFFE0;
-            // this.v ^= 0x0400;
-        }
-        else {
-            this.v++;
-        }
-    }
+    // incrementX() {
+    //     if ((this.v & 0x001F) === 31) {
+    //         this.v &= 0xFFE0;
+    //         // this.v ^= 0x0400;
+    //     }
+    //     else {
+    //         this.v++;
+    //     }
+    // }
 
-    incrementY() {
-	if ((this.v & 0x7000) != 0x7000) {
-	    // increment fine Y
-	    this.v += 0x1000;
-	} else {
-	    // fine Y = 0
-	    this.v &= 0x8FFF;
-	    // let y = coarse Y
-	    let y = (this.v & 0x03E0) >> 5;
-	    if (y == 29) {
-		// coarse Y = 0
-		y = 0;
-		// switch vertical nametable
-		this.v ^= 0x0800;
-	    } else if (y == 31) {
-		// coarse Y = 0, nametable not switched
-		y = 0;
-	    } else {
-		// increment coarse Y
-		y++;
-	    }
-	    // put coarse Y back into v
-	    this.v = (this.v & 0xFC1F) | (y << 5);
-	}
-    }
+    // incrementY() {
+    //     if ((this.v & 0x7000) != 0x7000) {
+    //         // increment fine Y
+    //         this.v += 0x1000;
+    //     } else {
+    //         // fine Y = 0
+    //         this.v &= 0x8FFF;
+    //         // let y = coarse Y
+    //         let y = (this.v & 0x03E0) >> 5;
+    //         if (y == 29) {
+    //     	// coarse Y = 0
+    //     	y = 0;
+    //     	// switch vertical nametable
+    //     	this.v ^= 0x0800;
+    //         } else if (y == 31) {
+    //     	// coarse Y = 0, nametable not switched
+    //     	y = 0;
+    //         } else {
+    //     	// increment coarse Y
+    //     	y++;
+    //         }
+    //         // put coarse Y back into v
+    //         this.v = (this.v & 0xFC1F) | (y << 5);
+    //     }
+    // }
 
     copyX() {
 	// v: .....F.. ...EDCBA = t: .....F.. ...EDCBA
@@ -420,8 +380,12 @@ export default class Ppu {
             throw `clampedTileY: ${clampedTileY}`;
         }
 
+        const nn = (this.t & 0x0C00) >> 10;
+
         for (let x = 0; x < 32; x++) {
-            const tileX = x + this.scrollTileX();
+            const sx =  ~~((this.scrollX + ((nn % 2) * 256)) / 8);
+            // const tileX = x + this.scrollTileX();
+            const tileX = x + sx;
             const clampedTileX = tileX % 32;
             const nameTableId = (~~(tileX / 32) % 2) + tableIdOffset;
             const nameTableAddressOffset = nameTableId * 0x0400; // 0x400はネームテーブルと属性テーブルの合計サイズ
