@@ -789,8 +789,6 @@ export default class Cpu {
         }
         this.interrupts.deassertIrq();
 
-        console.log("----process irq-----");
-
         this.registers.P.break = false;
         this.push((this.registers.PC >> 8) & 0xFF);
         this.push(this.registers.PC & 0xFF);
@@ -810,10 +808,11 @@ export default class Cpu {
                   (+this.registers.P.zero) << 1 |
                   (+this.registers.P.carry);
 
+        /* eslint-disable no-console */
         console.log("A:", this.registers.A.toString(16), "X:", this.registers.X.toString(16),
             "Y:", this.registers.Y.toString(16), "P:", status.toString(16),
             "sp:", this.registers.SP.toString(16));
-
+        /* eslint-enable no-console */
     }
 
     run(): number {
@@ -840,10 +839,11 @@ export default class Cpu {
         if (!instruction) {
             throw `opecode: ${opecode.toString(16)}`;
         }
-        const { fullName, baseName, mode, cycle } = instruction;
-        const { addressOrData, additionalCycle } = this.getAddressOrData(mode);
 
-        // console.log("addressOrdata:" + addressOrData.toString(16));
+        /* eslint-disable no-unused-vars */
+        const { fullName, baseName, mode, cycle } = instruction;
+        /* eslint-enable no-unused-vars */
+        const { addressOrData, additionalCycle } = this.getAddressOrData(mode);
 
         this.execInstruction(baseName, mode, addressOrData);
 
