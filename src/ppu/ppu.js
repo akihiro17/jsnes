@@ -56,12 +56,6 @@ export default class Ppu {
     isHorizontalScroll: boolean;
     config: Config;
     vramReadBuf: Byte;
-    v: Word;
-    t: Word;
-    w: number;
-    x: number;
-    nameTableByte: Byte;
-    nTableId: number;
 
     constructor(ppuBus: PpuBus, interrupts: Interrupts, config: Config) {
         this.cycle = 0;
@@ -82,11 +76,6 @@ export default class Ppu {
         this.isHorizontalScroll = true;
         this.config = config;
         this.vramReadBuf = 0;
-        this.v = 0;
-        this.t = 0;
-        this.w = 0;
-        this.x = 0;
-        this.nameTableByte = 0;
     }
 
     get nameTableId(): Byte {
@@ -223,8 +212,6 @@ export default class Ppu {
     run(cycle: number): ?RenderingData {
         this.cycle += cycle;
 
-        this.run2();
-
         if (this.line === 0) {
             this.background = [];
             this.buildSprites();
@@ -273,78 +260,7 @@ export default class Ppu {
         return null;
     }
 
-    run2() {
-        const preLine = this.line == 261;
-        const visibleLIne = this.line < 240;
-        const renderLine = preLine || visibleLIne;
-        const preFetchCycle = this.cycle >= 321 && this.cycle <= 336;
-        const visibleCycle = this.cycle >= 1 && this.cycle <= 256;
-        const fetchCycle = preFetchCycle || visibleCycle;
-
-        if (this.isBackgroundEnable) {
-            if (preLine && this.cycle >= 280 && this.cycle <= 304) {
-		this.copyY();
-	    }
-
-            if (renderLine) {
-                if (this.cycle === 257) {
-                    // console.log("copy x");
-                    this.copyX();
-                }
-            }
-        }
-    }
-
-    // incrementX() {
-    //     if ((this.v & 0x001F) === 31) {
-    //         this.v &= 0xFFE0;
-    //         // this.v ^= 0x0400;
-    //     }
-    //     else {
-    //         this.v++;
-    //     }
-    // }
-
-    // incrementY() {
-    //     if ((this.v & 0x7000) != 0x7000) {
-    //         // increment fine Y
-    //         this.v += 0x1000;
-    //     } else {
-    //         // fine Y = 0
-    //         this.v &= 0x8FFF;
-    //         // let y = coarse Y
-    //         let y = (this.v & 0x03E0) >> 5;
-    //         if (y == 29) {
-    //     	// coarse Y = 0
-    //     	y = 0;
-    //     	// switch vertical nametable
-    //     	this.v ^= 0x0800;
-    //         } else if (y == 31) {
-    //     	// coarse Y = 0, nametable not switched
-    //     	y = 0;
-    //         } else {
-    //     	// increment coarse Y
-    //     	y++;
-    //         }
-    //         // put coarse Y back into v
-    //         this.v = (this.v & 0xFC1F) | (y << 5);
-    //     }
-    // }
-
-    copyX() {
-	// v: .....F.. ...EDCBA = t: .....F.. ...EDCBA
-	this.v = (this.v & 0xFBE0) | (this.t & 0x041F);
-    }
-
-    copyY() {
-        // v: .IHGF.ED CBA..... = t: .IHGF.ED CBA.....
-        this.v = (this.v & 0x841F) | (this.t & 0x7BE0);
-    }
-
     buildTile(tileX: Byte, tileY: Byte, offset: Word) {
-
-        // console.log("tileX:" + tileX);
-        // console.log("tileY:" + tileY);
 
         const blockId = this.getBlockId(tileX, tileY);
 
@@ -380,21 +296,14 @@ export default class Ppu {
             throw `clampedTileY: ${clampedTileY}`;
         }
 
-        const nn = (this.t & 0x0C00) >> 10;
-
         for (let x = 0; x < 32; x++) {
-            const sx =  ~~((this.scrollX + ((nn % 2) * 256)) / 8);
-            // const tileX = x + this.scrollTileX();
-            const tileX = x + sx;
+            const tileX = x + this.scrollTileX();
             const clampedTileX = tileX % 32;
             const nameTableId = (~~(tileX / 32) % 2) + tableIdOffset;
             const nameTableAddressOffset = nameTableId * 0x0400; // 0x400はネームテーブルと属性テーブルの合計サイズ
             const tile = this.buildTile(clampedTileX, clampedTileY, nameTableAddressOffset);
 
             this.background.push(tile);
-
-            // console.log("sprite:" + tile["sprite"]);
-            // console.log("palette:" + tile["paletteId"]);
         }
 
         if (this.background.length > 30 * 32) {
@@ -461,7 +370,6 @@ export default class Ppu {
         if (this.vramAddress >= 0x2000) {
             const address = this.calculateAddress();
             this.vramAddress += this.vramOffset;
-            this.v += this.vramOffset;
             // palette
             // if (address >= 0x0F00) {
             //     return this.vram.read(address);
@@ -471,7 +379,6 @@ export default class Ppu {
         else {
             this.vramReadBuf = this.readCharacterRam(this.vramAddress);
             this.vramAddress += this.vramOffset;
-            this.v += this.vramOffset;
         }
         return buf;
     }
@@ -483,9 +390,6 @@ export default class Ppu {
             const data = this.registers[0x02];
 
             this.clearVblank();
-
-            // w:
-            this.w = 0;
 
             return data;
         } else if (address === 0x0004) {
@@ -531,10 +435,6 @@ export default class Ppu {
         }
 
         // PPUレジスタ
-        if (address === 0x0000) {
-            this.t = (this.t & 0xF3FF) | ((data & 0x03) << 10);
-        }
-
         if (address === 0x0000 || address === 0x0001 || address === 0x0002) {
             this.registers[address] = data;
             return;
@@ -550,16 +450,12 @@ export default class Ppu {
         } else {
             this.vramAddress = data << 8;
             this.isLowerVramAddr = true;
-        }
 
-        if (this.w === 0) {
-            this.t = (this.t & 0x80FF) | (data & 0x3F);
-            this.w  = 1;
-        }
-        else {
-	    this.t = (this.t & 0xFF00) | data;
-	    this.v = this.t;
-	    this.w = 0;
+            // $2006 first write (w is 0)
+            // t: .FEDCBA ........ = d: ..FEDCBA
+            // t: yyy NN YYYYY XXXXX
+            this.registers[0x00] &= 0xFC;
+            this.registers[0x00] |= (data & 0x0C) >> 2;
         }
     }
 
@@ -585,7 +481,6 @@ export default class Ppu {
             this.bus.writeByPpu(this.vramAddress, data);
         }
         this.vramAddress += this.vramOffset;
-        this.v += this.vramOffset;
     }
 
     writeScrollData(data: Byte) {
@@ -595,17 +490,6 @@ export default class Ppu {
         } else {
             this.scrollY = data & 0xFF;
             this.isHorizontalScroll = true;
-        }
-
-        if (this.w === 0) {
-            this.t = (this.t & 0xFFE0) | (data >> 3);
-            this.x = data & 0x07;
-            this.w = 1;
-        }
-        else {
-            this.t = (this.t & 0x8FFF) | (data & 0x07);
-            this.t = (this.t & 0xFC1F) | (data & 0xF8);
-            this.w = 0;
         }
     }
 
