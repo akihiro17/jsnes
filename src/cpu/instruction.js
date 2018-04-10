@@ -1,4 +1,10 @@
 
+export type instruction = $Exact<{
+    fullName: string;
+    baseName: string;
+    mode: string;
+    cycle: string;
+}>;
 export const cycles: $ReadOnlyArray<number> = [
     /* 0x00*/ 7, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6,
     /* 0x10*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
@@ -19,7 +25,7 @@ export const cycles: $ReadOnlyArray<number> = [
 ];
 
 /* eslint-disable */
-export const instructions = {
+export const instructions: Map<string, instruction> = {
     "A9": { fullName: "LDA_IMM", baseName: "LDA", mode: "immediate", cycle: cycles[0xA9] },
     "A5": { fullName: "LDA_ZERO", baseName: "LDA", mode: "zeroPage", cycle: cycles[0xA5] },
     "AD": { fullName: "LDA_ABS", baseName: "LDA", mode: "absolute", cycle: cycles[0xAD] },
