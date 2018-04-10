@@ -328,11 +328,6 @@ export default class Cpu {
     bus: CpuBus
     interrupts: Interrupts;
     hasBranched: boolean;
-    prev: number;
-    prev2: number;
-    counter: number;
-    min: number;
-    max: number;
 
     constructor(bus: CpuBus, interrupts: Interrupts) {
         this.registers = {
@@ -342,11 +337,6 @@ export default class Cpu {
         this.bus = bus;
         this.interrupts = interrupts;
         this.hasBranched = false;
-        this.prev = 0;
-        this.prev2 = 0;
-        this.counter = 0;
-        this.min = 100000;
-        this.max = 110000;
     }
 
     read(address: Word, size?: "Byte" | "Word"): Byte {
@@ -1100,7 +1090,7 @@ export default class Cpu {
         const opecode = this.fetch(this.registers.PC);
 
         if (!opecode) {
-            throw `${this.registers.PC.toString(16)}: opecode is not defiend. ${this.prev.toString(16)}prev2: ${this.prev2.toString(16)}`;
+            throw `${this.registers.PC.toString(16)}: opecode is not defiend.`;
         }
 
         // console.log(instructions[opecode.toString(16).toUpperCase()]);
@@ -1109,25 +1099,12 @@ export default class Cpu {
                   instructions[opecode.toString(16).toUpperCase()];
 
         if (!instruction) {
-            throw `opecode: ${opecode.toString(16)} :prev: ${this.prev}prev2: ${this.prev2}`;
+            throw `opecode: ${opecode.toString(16)}`;
         }
         const { fullName, baseName, mode, cycle } = instruction;
         const { addressOrData, additionalCycle } = this.getAddressOrData(mode);
 
-        this.counter++;
-
-        if (this.min <= this.counter && this.counter <= this.max) {
-            if (baseName !== "BEQ" && baseName !== "CMP") {
-                // console.log("PC:", this.registers.PC, baseName, mode, addressOrData, "n:", this.registers.P.negative, "z:", this.registers.P.zero);
-            }
-        }
-        else if (this.counter > this.max){
-            // throw "stop";
-        }
-
         // console.log("addressOrdata:" + addressOrData.toString(16));
-        this.prev = opecode;
-        this.prev2 = this.prev;
 
         this.execInstruction(baseName, mode, addressOrData);
 
