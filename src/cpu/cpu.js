@@ -142,12 +142,12 @@ export default class Cpu {
                     additionalCycle: 0
                 };
             }
-           case "immediate": {
+            case "immediate": {
                 return {
                     addressOrData: this.fetch(this.registers.PC),
                     additionalCycle: 0
                 };
-           }
+            }
             case "relative": {
                 const base = this.fetch(this.registers.PC);
                 const offset = this.registers.PC;
@@ -185,6 +185,7 @@ export default class Cpu {
             }
             case "absoluteX": {
                 const address = this.fetch(this.registers.PC, "Word");
+
                 return {
                     addressOrData: (address + this.registers.X) & 0xFFFF,
                     additionalCycle: (address & 0xFF00) !== ((address + this.registers.X) & 0xFF00) ? 1 : 0
@@ -192,16 +193,19 @@ export default class Cpu {
             }
             case "absoluteY": {
                 const address = this.fetch(this.registers.PC, "Word");
+
                 return {
                     addressOrData: (address + this.registers.Y) & 0xFFFF,
                     additionalCycle: (address & 0xFF00) !== ((address + this.registers.Y) & 0xFF00) ? 1 : 0
                 };
             }
-            case 'preIndexedIndirect': {
+            case "preIndexedIndirect": {
+
                 // 上位アドレスを$00とし、 また2番目のバイトにインデックスレジスタXを加算（8）した値を下位アドレスとします。
                 // このアドレスに格納されている値を実効アドレスの下位バイト、 そしてその次のアドレスに格納されている値を実効アドレスの上位バイトとします。 このインクリメントにおいてキャリーは無視します
                 const baseAddr = (this.fetch(this.registers.PC) + this.registers.X) & 0xFF;
                 const addr = this.read(baseAddr) + (this.read((baseAddr + 1) & 0xFF) << 8);
+
                 return {
                     addressOrData: addr & 0xFFFF,
                     additionalCycle: (addr & 0xFF00) !== (baseAddr & 0xFF00) ? 1 : 0
@@ -221,7 +225,8 @@ export default class Cpu {
                     additionalCycle: (addr & 0xFF00) !== (baseAddr & 0xFF00) ? 1 : 0
                 };
             }
-            case 'indirectAbsolute': {
+            case "indirectAbsolute": {
+
                 // Absolute Addressingで得られる番地に格納されている値を下位アドレス、
                 // その次の番地に格納されている値を上位アドレスとした番地を演算対象とする
 
@@ -230,6 +235,7 @@ export default class Cpu {
                 // このインクリメントで下位バイトからのキャリーは無視します。(addrOrData & 0xFF00) | (((addrOrData & 0xFF) + 1) & 0xFF)
                 const addrOrData = this.fetch(this.registers.PC, "Word");
                 const addr = this.read(addrOrData) + (this.read((addrOrData & 0xFF00) | (((addrOrData & 0xFF) + 1) & 0xFF)) << 8);
+
                 return {
                     addressOrData: addr & 0xFFFF,
                     additionalCycle: 0
@@ -346,10 +352,12 @@ export default class Cpu {
                 break;
             }
             case "BIT": {
+
                 // メモリのデータをAでテストします。
                 // A and M の結果でZフラグをセットし、Mのビット7をNへ、ビット6をVへ転送します。
                 // flags: N V Z
                 const data = (mode === "immediate") ? addressOrData : this.read(addressOrData);
+
                 this.registers.P.zero = !(this.registers.A & data);
                 this.registers.P.negative = !!(data & 0x80);
                 this.registers.P.overflow = !!(data & 0x40);
@@ -444,7 +452,7 @@ export default class Cpu {
 
                     // Aを右シフト、ビット7には0
                     // Aのビット0 -> C
-                    const acc = this.registers.A & 0xFF; //こうすると右シフトでビット7に0がはいる
+                    const acc = this.registers.A & 0xFF; // こうすると右シフトでビット7に0がはいる
 
                     this.registers.P.carry = !!(acc & 0x01);
                     this.registers.A = acc >> 1;
@@ -484,6 +492,7 @@ export default class Cpu {
                 } else {
                     const data = this.read(addressOrData);
                     const dataToWrite = (data << 1) & 0xFF;
+
                     this.write(addressOrData, dataToWrite);
                     this.registers.P.carry = !!(data & 0x80);
                     this.registers.P.zero = !(dataToWrite);
@@ -505,7 +514,9 @@ export default class Cpu {
                 } else {
                     const data = this.read(addressOrData);
                     const dataToWrite = (data << 1) & 0xFF | (this.registers.P.carry ? 0x01 : 0x00);
+
                     this.write(addressOrData, dataToWrite);
+
                     // またASL、ROL命令ではAのビット7を、LSR、ROR命令ではAのビット0をストアします
                     this.registers.P.carry = !!(data & 0x80);
                     this.registers.P.zero = !(dataToWrite);
@@ -527,7 +538,9 @@ export default class Cpu {
                 } else {
                     const data = this.read(addressOrData);
                     const dataToWrite = (data >> 1) | (this.registers.P.carry ? 0x80 : 0x00);
+
                     this.write(addressOrData, dataToWrite);
+
                     // またASL、ROL命令ではAのビット7を、LSR、ROR命令ではAのビット0をストアします
                     this.registers.P.carry = !!(data & 0x01);
                     this.registers.P.zero = !(dataToWrite);
@@ -543,6 +556,7 @@ export default class Cpu {
 
                 this.registers.P.negative = !!(operated & 0x80);
                 this.registers.P.zero = !(operated & 0xFF);
+
                 // ?
                 this.registers.P.carry = operated >= 0x00;
 
@@ -565,6 +579,7 @@ export default class Cpu {
                 break;
             }
             case "PHP": {
+
                 // ?
                 this.registers.P.break = true;
                 this.pushStatus();
@@ -572,6 +587,7 @@ export default class Cpu {
             }
             case "PLP": {
                 this.popStatus();
+
                 // ?
                 this.registers.P.reserved = true;
                 break;
@@ -713,6 +729,7 @@ export default class Cpu {
                 break;
             }
             case "LAX": {
+
                 // Shortcut for LDA value then TAX.
                 this.registers.A = this.registers.X = this.read(addressOrData);
                 this.registers.P.negative = !!(this.registers.A & 0x80);
@@ -720,6 +737,7 @@ export default class Cpu {
                 break;
             }
             case "SAX": {
+
                 // Stores the bitwise AND of A and X. As with STA and STX, no flags are affected.
                 this.write(addressOrData, this.registers.A & this.registers.X);
                 break;
@@ -791,9 +809,10 @@ export default class Cpu {
                   (+this.registers.P.interrupt) << 2 |
                   (+this.registers.P.zero) << 1 |
                   (+this.registers.P.carry);
+
         console.log("A:", this.registers.A.toString(16), "X:", this.registers.X.toString(16),
-                    "Y:", this.registers.Y.toString(16), "P:", status.toString(16),
-                    "sp:", this.registers.SP.toString(16));
+            "Y:", this.registers.Y.toString(16), "P:", status.toString(16),
+            "sp:", this.registers.SP.toString(16));
 
     }
 
@@ -814,9 +833,9 @@ export default class Cpu {
         }
 
         // console.log(instructions[opecode.toString(16).toUpperCase()]);
-        const instruction = opecode <= 0x0F ?
-                  instructions["0" + opecode.toString(16).toUpperCase()] :
-                  instructions[opecode.toString(16).toUpperCase()];
+        const instruction = opecode <= 0x0F
+            ? instructions[`0${opecode.toString(16).toUpperCase()}`]
+            : instructions[opecode.toString(16).toUpperCase()];
 
         if (!instruction) {
             throw `opecode: ${opecode.toString(16)}`;
